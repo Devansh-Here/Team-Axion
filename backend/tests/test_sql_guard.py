@@ -68,6 +68,12 @@ def test_rejected_statements(sql):
     "SELECT department FROM employees ORDER BY salary",
     "SELECT name FROM (SELECT salary AS name FROM employees)",
     "SELECT region FROM sales WHERE net_amt > (SELECT MAX(salary) FROM employees)",
+    "SELECT department, COUNT(*) AS n FROM employees GROUP BY department HAVING MAX(salary) > 0",
+    "SELECT salary, COUNT(*) FROM employees GROUP BY salary",
+    "SELECT e.department FROM employees e WHERE EXISTS (SELECT 1 FROM sales s WHERE s.region = e.salary)",
+    "SELECT department FROM employees UNION SELECT CAST(salary AS TEXT) FROM employees",
+    "SELECT department, ROW_NUMBER() OVER (ORDER BY salary) AS rn FROM employees",
+    "SELECT CASE WHEN salary > 0 THEN 1 ELSE 0 END FROM employees",
     "SELECT fake_col FROM sales",
 ])
 def test_denied_columns_and_star(sql):

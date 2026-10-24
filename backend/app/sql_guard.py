@@ -144,4 +144,38 @@ def _validate(sql, allowed_tables, allowed_columns):
             if f"{alias_map[q]}.{col.name.lower()}" not in cols_ok:
                 return Reject("COLUMN_NOT_ALLOWED")
 
+    # qualify() can leave columns in HAVING/GROUP BY/window expressions
+    # unqualified. Check the original AST as well so a protected column
+    # cannot slip through those clauses (for example HAVING MAX(salary)).
+    allowed_unqualified = {
+        item.rsplit(".", 1)[1]
+        for item in cols_ok
+        if "." in item
+    }
+    select_aliases = {
+        alias.alias_or_name.lower()
+        for alias in tree.find_all(exp.Alias)
+        if alias.alias_or_name
+    }
+
+    def is_alias_reference(column):
+        parent = column.parent
+        while parent is not None:
+            if isinstance(parent, (exp.Having, exp.Group, exp.Order, exp.Window)):
+                return True
+            if isinstance(parent, exp.Select):
+                return False
+            parent = parent.parent
+        return False
+
+    for col in tree.find_all(exp.Column):
+        if col.table:
+            continue
+        name = col.name.lower()
+        if name in allowed_unqualified:
+            continue
+        if name in select_aliases and is_alias_reference(col):
+            continue
+        return Reject("COLUMN_NOT_ALLOWED")
+
     return Allow(ast=tree)
