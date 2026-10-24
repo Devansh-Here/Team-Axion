@@ -97,6 +97,8 @@ def compose_answer(outcome: QueryOutcome) -> str:
         return "No rows matched the current filters."
     if len(outcome.columns) == 1 and outcome.row_count == 1:
         return f"{outcome.columns[0]}: {outcome.rows[0][0]}"
+    if outcome.row_count <= 10:
+        return "; ".join(", ".join(f"{c}: {v}" for c, v in zip(outcome.columns, r)) for r in outcome.rows)
     return f"{outcome.row_count} rows returned. See the result preview."
 
 

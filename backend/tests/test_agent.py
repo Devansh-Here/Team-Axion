@@ -248,3 +248,12 @@ def test_analyze_non_trend_ignores_history_check():
     deps = _trend_deps({})                    # empty profile must not block normal questions
     out = analyze(AnalysisRequest(dataset_id="demo", question=Q), "analyst", deps)
     assert out.status == "ANSWER"
+
+from app.agent import compose_answer
+
+def test_answer_numbers_come_from_rows_no_causal_words():
+    o = QueryOutcome(status="OK", columns=["category", "total"],
+                     rows=[["Electronics", 1200.5], ["Furniture", 350]], row_count=2)
+    a = compose_answer(o)
+    assert "Electronics" in a and "1200.5" in a and "350" in a
+    assert not any(w in a.lower() for w in ("because", "due to", "caused by"))
