@@ -1,0 +1,32 @@
+[
+  {
+    "id": "demo-001",
+    "question": "Total net sales by category in 2025",
+    "expected_status": "ANSWER",
+    "label": "supported aggregation"
+  },
+  {
+    "id": "demo-002",
+    "question": "Which categories were lower in 2025 than 2024?",
+    "expected_status": "ANSWER",
+    "label": "period comparison"
+  },
+  {
+    "id": "demo-003",
+    "question": "Which product declined most?",
+    "expected_status": "CLARIFICATION_REQUIRED",
+    "label": "absolute versus percentage ambiguity"
+  },
+  {
+    "id": "demo-004",
+    "question": "What is the average employee salary by department?",
+    "expected_status": "ACCESS_DENIED",
+    "label": "protected field"
+  },
+  {
+    "id": "demo-005",
+    "question": "Show the sales trend before 2020",
+    "expected_status": "INSUFFICIENT_EVIDENCE",
+    "label": "missing historical evidence"
+  }
+]
