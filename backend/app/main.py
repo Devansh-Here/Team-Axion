@@ -9,6 +9,7 @@ from pathlib import Path
 from fastapi import APIRouter, FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import config, metadata_db
@@ -47,9 +48,19 @@ def _strip(obj):
 @asynccontextmanager
 async def lifespan(app):
     metadata_db.init_db()
-    demo = Path(config.DATA_DIR) / "demo" / "demo.sqlite"
-    if demo.is_file():
-        metadata_db.upsert_dataset("demo", str(demo))
+    data_roots = [Path(config.DATA_DIR)]
+    repo_data = Path(__file__).resolve().parents[2] / "data"
+    if not data_roots[0].is_absolute():
+        data_roots.append(repo_data)
+    for data_root in data_roots:
+        for filename in ("demo.sqlite", "sales_demo.sqlite"):
+            demo = data_root / "demo" / filename
+            if demo.is_file():
+                metadata_db.upsert_dataset("demo", str(demo))
+                break
+        else:
+            continue
+        break
     yield
 
 
@@ -161,3 +172,7 @@ def audit(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
 
 
 app.include_router(router)
+
+_FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
+if _FRONTEND_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=_FRONTEND_DIR, html=True), name="frontend")

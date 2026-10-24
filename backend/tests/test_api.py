@@ -95,3 +95,9 @@ def test_internal_error_leaks_nothing(client, monkeypatch):
 
 def test_audit_limit_validated(client):
     assert client.get(f"{BASE}/audit?limit=100000").status_code == 422
+
+
+def test_workspace_ui_is_served(client):
+    r = client.get("/")
+    assert r.status_code == 200
+    assert "Evidence-first data analyst" in r.text

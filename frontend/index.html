@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Hypnexis AI-02 | Workspace</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">HYPNEXIS AI-02</p>
+        <h1>Evidence-first data analyst</h1>
+      </div>
+      <div class="badges" aria-label="Runtime status">
+        <span id="api-status" class="badge badge-muted">API checking…</span>
+        <span class="badge badge-role">Role: Analyst (server-resolved)</span>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar" aria-label="Workspace navigation">
+        <button class="nav-button active" data-view="workspace">Workspace</button>
+        <button class="nav-button" data-view="profile">Data profile</button>
+        <button class="nav-button" data-view="permissions">Permissions</button>
+        <button class="nav-button" data-view="audit">Audit</button>
+        <div class="sidebar-note">
+          <strong>Safety boundary</strong>
+          <p>The model suggests. The backend policy and SQL guard decide.</p>
+        </div>
+      </aside>
+
+      <main class="content">
+        <section id="workspace-view" class="view" aria-labelledby="workspace-title">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">WORKSPACE</p>
+              <h2 id="workspace-title">Ask your business data</h2>
+            </div>
+            <label class="dataset-control">Dataset
+              <select id="dataset-select" aria-label="Dataset"></select>
+            </label>
+          </div>
+
+          <div id="page-error" class="alert alert-error" role="alert" hidden></div>
+          <div id="offline-message" class="alert alert-warning" role="status" hidden>
+            Local model unavailable. You can still inspect the profile; retry the analysis when Ollama is ready.
+          </div>
+
+          <form id="question-form" class="question-card">
+            <label for="question">Question</label>
+            <textarea id="question" rows="3" maxlength="2000" required
+              placeholder="Which categories had lower net sales in 2025 than 2024?"></textarea>
+            <div class="form-footer">
+              <div class="examples" aria-label="Example questions">
+                <button type="button" class="example-button">Total net sales by category in 2025</button>
+                <button type="button" class="example-button">Which regions have missing sales values?</button>
+              </div>
+              <button id="analyze-button" class="primary-button" type="submit">Analyze</button>
+            </div>
+          </form>
+
+          <section class="timeline-card" aria-labelledby="timeline-title">
+            <div class="section-heading compact">
+              <h3 id="timeline-title">Run stages</h3>
+              <span id="run-id" class="run-id">No run yet</span>
+            </div>
+            <ol id="stage-list" class="stage-list">
+              <li data-stage="schema_selected"><span class="stage-dot"></span><span>Schema selected</span><strong>Waiting</strong></li>
+              <li data-stage="sql_generated"><span class="stage-dot"></span><span>SQL generated</span><strong>Waiting</strong></li>
+              <li data-stage="executed"><span class="stage-dot"></span><span>Query executed</span><strong>Waiting</strong></li>
+              <li data-stage="validation"><span class="stage-dot"></span><span>Result validated</span><strong>Waiting</strong></li>
+              <li data-stage="final"><span class="stage-dot"></span><span>Final outcome</span><strong>Waiting</strong></li>
+            </ol>
+          </section>
+
+          <section id="answer-card" class="answer-card" aria-live="polite" hidden>
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">OUTCOME</p>
+                <h3 id="outcome-status">Waiting</h3>
+              </div>
+              <span id="evidence-id" class="run-id"></span>
+            </div>
+            <p id="answer-text" class="answer-text"></p>
+            <ul id="warnings" class="warning-list"></ul>
+            <div class="tabs" role="tablist" aria-label="Evidence details">
+              <button class="tab-button active" role="tab" aria-selected="true" data-tab="result-tab">Result</button>
+              <button class="tab-button" role="tab" aria-selected="false" data-tab="checks-tab">Checks</button>
+              <button class="tab-button" role="tab" aria-selected="false" data-tab="evidence-tab">Evidence</button>
+            </div>
+            <div id="result-tab" class="tab-panel" role="tabpanel"></div>
+            <div id="checks-tab" class="tab-panel" role="tabpanel" hidden></div>
+            <div id="evidence-tab" class="tab-panel" role="tabpanel" hidden></div>
+          </section>
+        </section>
+
+        <section id="profile-view" class="view" aria-labelledby="profile-title" hidden>
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">DATA PROFILE</p>
+              <h2 id="profile-title">Permitted schema and quality signals</h2>
+            </div>
+            <button id="refresh-profile" class="secondary-button" type="button">Refresh profile</button>
+          </div>
+          <div id="profile-content" class="profile-grid"></div>
+        </section>
+
+        <section id="permissions-view" class="view" aria-labelledby="permissions-title" hidden>
+          <p class="eyebrow">PERMISSIONS</p>
+          <h2 id="permissions-title">Backend-controlled access</h2>
+          <div class="info-card">
+            <p><strong>Role:</strong> Analyst (resolved by the backend)</p>
+            <p><strong>Policy:</strong> Protected columns are removed before model context and checked again before execution.</p>
+            <p><strong>Protected example:</strong> employee salary is not exposed in the analyst schema.</p>
+          </div>
+        </section>
+
+        <section id="audit-view" class="view" aria-labelledby="audit-title" hidden>
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">AUDIT</p>
+              <h2 id="audit-title">Recent run events</h2>
+            </div>
+            <button id="refresh-audit" class="secondary-button" type="button">Refresh audit</button>
+          </div>
+          <div id="audit-content" class="table-wrap"></div>
+        </section>
+      </main>
+    </div>
+    <script src="/app.js" defer></script>
+  </body>
+</html>
