@@ -1,4 +1,5 @@
 """Wires Lane A to the real Lane B/C functions. Nothing here is built until default_deps() is called."""
+import hashlib
 import sqlite3
 
 from app import config, metadata_db
@@ -18,6 +19,15 @@ def _db_path(dataset_id: str) -> str:
     if not row:
         raise ValueError("unknown dataset")
     return row["db_path"]          # CONFIRM this key name (see Step 3)
+
+
+def _dataset_sha256(dataset_id: str):
+    """SHA-256 of the registered DB file at run time (measured, not assumed)."""
+    h = hashlib.sha256()
+    with open(_db_path(dataset_id), "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def default_deps(role: str) -> Deps:
@@ -50,6 +60,6 @@ def default_deps(role: str) -> Deps:
         validate_result=validate_result,
         generate=client.generate,
         audit=write_audit_event,
-        save_evidence=make_evidence_saver(metadata_db.save_evidence, config.MODEL_NAME),
+        save_evidence=make_evidence_saver(metadata_db.save_evidence, config.MODEL_NAME, _dataset_sha256),
     )
     return deps

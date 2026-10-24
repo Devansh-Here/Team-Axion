@@ -13,21 +13,30 @@ from app.prompts import build_sql_prompt
 from app.schema_linker import link_schema
 import re
 
+def _iter_column_infos(profile):
+    """Yield per-column profile dicts. Supports both profiler shapes:
+    {table: {col: {...}}} (old) and {table: {"columns": {col: {...}}}} (data-quality lane)."""
+    for table in (profile or {}).values():
+        if not isinstance(table, dict):
+            continue
+        cols = table.get("columns") if isinstance(table.get("columns"), dict) else table
+        for info in cols.values():
+            if isinstance(info, dict):
+                yield info
+
+
 def _date_years(profile):
     mins, maxs = [], []
-    for cols in (profile or {}).values():
-        if not isinstance(cols, dict):
-            continue
-        for info in cols.values():
-            if not isinstance(info, dict):
-                continue
-            lo, hi = info.get("date_min"), info.get("date_max")
-            if lo and hi:
-                try:
-                    mins.append(int(str(lo)[:4]))
-                    maxs.append(int(str(hi)[:4]))
-                except ValueError:
-                    pass
+    for info in _iter_column_infos(profile):
+        rng = info.get("date_range") if isinstance(info.get("date_range"), dict) else {}
+        lo = info.get("date_min") or rng.get("min")
+        hi = info.get("date_max") or rng.get("max")
+        if lo and hi:
+            try:
+                mins.append(int(str(lo)[:4]))
+                maxs.append(int(str(hi)[:4]))
+            except ValueError:
+                pass
     return mins, maxs
 
 
@@ -201,7 +210,9 @@ def analyze(request: AnalysisRequest, role: str, deps: Optional[Deps] = None) ->
         except Exception:
             verdict = None
         if type(verdict).__name__ != "Allow":
-            previous_error = _safe_code(getattr(verdict, "code", None), "sql_rejected")
+            # sql_guard.Reject carries `.reason` (codes only, no column/table names); older stubs used `.code`
+            reason = getattr(verdict, "reason", None) or getattr(verdict, "code", None)
+            previous_error = _safe_code(reason, "sql_rejected")
             trace["rejections"].append(previous_error)   # rejected SQL itself is NOT stored
             continue
 

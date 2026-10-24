@@ -257,3 +257,25 @@ def test_answer_numbers_come_from_rows_no_causal_words():
     a = compose_answer(o)
     assert "Electronics" in a and "1200.5" in a and "350" in a
     assert not any(w in a.lower() for w in ("because", "due to", "caused by"))
+
+def test_real_guard_reject_reason_reaches_evidence_and_repair_prompt():
+    """Regression: the real sql_guard.Reject exposes .reason (not .code). Test fakes used .code and hid the bug."""
+    from app.sql_guard import validate_candidate
+    bad = json.dumps({"sql": "DROP TABLE sales", "assumptions": [], "needs_clarification": False,
+                      "clarification_question": None})
+    good = json.dumps({"sql": "SELECT region, SUM(net_amt) FROM sales GROUP BY region", "assumptions": [],
+                       "needs_clarification": False, "clarification_question": None})
+    gen = Seq(bad, good)
+    deps = make_deps(generate=gen, guard=validate_candidate)
+    out = run(deps)
+    assert out.status == "ANSWER"
+    ev = deps.evidences[0]
+    assert ev["rejections"] and ev["rejections"][0] != "sql_rejected"
+    assert ev["rejections"][0] == "NOT_SELECT" or ev["rejections"][0].startswith("FORBIDDEN")
+    assert ev["rejections"][0] in gen.calls[1][0]          # the repair prompt received the real reason
+
+
+def test_evidence_dataset_hash_is_tbd_unless_measured():
+    from app.evidence import build_evidence_pack
+    assert build_evidence_pack({"run_id": "r"}, "ev_1", "m")["dataset_sha256"] == "TBD"
+    assert build_evidence_pack({"run_id": "r"}, "ev_1", "m", "abc")["dataset_sha256"] == "abc"
