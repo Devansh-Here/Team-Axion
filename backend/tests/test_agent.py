@@ -204,3 +204,56 @@ def test_model_asks_clarification_without_executing():
     assert out.status == "CLARIFICATION_REQUIRED"
     assert out.answer == "Absolute or percent?"
     assert deps.execute.calls == []
+
+from app.agent import history_problem
+
+P_2024 = {"sales": {"order_date": {"date_min": "2024-01-01", "date_max": "2024-12-31"}}}
+P_LONG = {"sales": {"order_date": {"date_min": "2022-01-01", "date_max": "2025-12-31"}}}
+
+def test_trend_before_2020_no_history():
+    assert history_problem("sales trend before 2020", P_2024) == "NO_HISTORY_FOR_PERIOD"
+
+def test_trend_snapshot_only():
+    assert history_problem("sales trend over time", P_2024) == "SNAPSHOT_ONLY"
+
+def test_trend_with_history_not_blocked():
+    assert history_problem("sales trend 2022 to 2025", P_LONG) is None
+
+def test_trend_unknown_profile_fails_closed():
+    assert history_problem("sales trend", {}) == "NO_DATE_INFO"
+
+def _trend_deps(profile):
+    deps = make_deps()
+    deps.get_profile = lambda ds, tables: profile
+    return deps
+
+
+def test_analyze_trend_no_history_abstains_without_model_call():  # T-018
+    deps = _trend_deps(P_2024)
+    out = analyze(AnalysisRequest(dataset_id="demo", question="sales trend before 2020"), "analyst", deps)
+    assert out.status == "INSUFFICIENT_EVIDENCE"
+    assert "NO_HISTORY_FOR_PERIOD" in out.warnings
+    assert deps.generate.calls == []          # model was never called
+    assert deps.guard.calls == []             # nothing executed
+
+
+def test_analyze_trend_with_history_proceeds():
+    deps = _trend_deps(P_LONG)
+    out = analyze(AnalysisRequest(dataset_id="demo", question="sales trend 2022 to 2025"), "analyst", deps)
+    assert out.status == "ANSWER"
+    assert len(deps.generate.calls) == 1
+
+
+def test_analyze_non_trend_ignores_history_check():
+    deps = _trend_deps({})                    # empty profile must not block normal questions
+    out = analyze(AnalysisRequest(dataset_id="demo", question=Q), "analyst", deps)
+    assert out.status == "ANSWER"
+
+from app.agent import compose_answer
+
+def test_answer_numbers_come_from_rows_no_causal_words():
+    o = QueryOutcome(status="OK", columns=["category", "total"],
+                     rows=[["Electronics", 1200.5], ["Furniture", 350]], row_count=2)
+    a = compose_answer(o)
+    assert "Electronics" in a and "1200.5" in a and "350" in a
+    assert not any(w in a.lower() for w in ("because", "due to", "caused by"))
