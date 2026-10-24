@@ -8,7 +8,7 @@ from app.policy import authorize
 def test_stubs_wire_together():
     out = analyze(AnalysisRequest(dataset_id="d", question="q"), role="analyst")
     assert out.run_id
-    assert authorize("analyst", "d", "q").action == "ALLOW"
+    assert authorize("analyst", "demo", "total net sales by category").action == "ALLOW"
 
 
 def test_demo_db_has_messy_rows(demo_db):
