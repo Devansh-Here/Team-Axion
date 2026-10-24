@@ -33,6 +33,8 @@ The evaluation harness and fixed synthetic smoke cases are present. Full model e
 - Tuning and held-out evaluation sets must be separated before reporting benchmark metrics.
 - The current five cases are a synthetic smoke set, not the planned 50–100 question benchmark.
 
+The ablation template is tracked separately in `outputs/ABLATION.md`; all configurations are currently **TBD / NOT RUN**.
+
 ## Limitations
 
 The real Ollama model/checkpoint, approved hardware record, benchmark protocol and full evaluation sample have not been run in this workspace. No accuracy or latency claim is made.
