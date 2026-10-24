@@ -88,11 +88,13 @@ def analyze(request: AnalysisRequest, role: str, deps: Optional[Deps] = None) ->
         sql = trace.get("sql")
         try:
             deps.audit({
-                "run_id": run_id, "status": status, "policy_action": trace.get("policy_action"),
-                "sql_hash": hashlib.sha256(sql.encode()).hexdigest() if sql else None,
-                "row_count": (summary or {}).get("row_count"), "attempts": trace["attempts"],
-                "rejections": trace["rejections"],
-            })
+            "run_id": run_id, "event_type": "analysis", "dataset_id": request.dataset_id,
+            "status": status, "policy_action": trace.get("policy_action"),
+            "row_count": (summary or {}).get("row_count"),
+            "repair_attempts": max(0, trace["attempts"] - 1),
+            "error_code": trace["rejections"][-1] if trace["rejections"] else None,
+            "sql": trace.get("sql"),          # audit.py hashes it; raw SQL is never stored
+        })
         except Exception:
             pass  # audit failure must not crash or leak; Kartik's audit layer reports its own errors
         return AnalysisOutcome(run_id=run_id, status=status, answer=answer, result_summary=summary,

@@ -75,7 +75,8 @@ def test_happy_path_answer():
     assert len(deps.execute.calls) == 1
     assert deps.guard.calls[0][0].startswith("SELECT")
     assert len(deps.audits) == 1
-    assert deps.audits[0]["sql_hash"] and "SELECT" not in json.dumps(deps.audits[0])
+    assert deps.audits[0]["event_type"] == "analysis"
+    assert deps.audits[0]["sql"].startswith("SELECT")   # raw SQL goes to audit.py, which stores only its hash
 
 
 def test_deny_never_calls_model():

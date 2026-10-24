@@ -1,0 +1,55 @@
+"""Wires Lane A to the real Lane B/C functions. Nothing here is built until default_deps() is called."""
+import sqlite3
+
+from app import config, metadata_db
+from app.agent import Deps
+from app.audit import write_audit_event
+from app.evidence import make_evidence_saver
+from app.executor import execute_read_only
+from app.model_client import ModelClient
+from app.policy import authorize, permitted_schema
+from app.profiler import profile_columns
+from app.result_checks import validate_result
+from app.sql_guard import validate_candidate
+
+
+def _db_path(dataset_id: str) -> str:
+    row = metadata_db.get_dataset(dataset_id)
+    if not row:
+        raise ValueError("unknown dataset")
+    return row["db_path"]          # CONFIRM this key name (see Step 3)
+
+
+def default_deps(role: str) -> Deps:
+    metadata_db.init_db()           # makes sure metadata tables exist (evidence/audit)
+    client = ModelClient()          # reads MODEL_BASE_URL / MODEL_NAME, loopback only
+
+    def get_profile(dataset_id: str, tables: list) -> dict:
+        conn = sqlite3.connect(f"file:{_db_path(dataset_id)}?mode=ro", uri=True)   # read-only
+        try:
+            return profile_columns(conn, tables)
+        finally:
+            conn.close()
+
+    def execute(dataset_id: str):
+        def run(sql: str, params: list):
+            return execute_read_only(
+                _db_path(dataset_id), sql, params,
+                timeout_s=config.MAX_QUERY_SECONDS,
+                max_rows=config.MAX_RESULT_ROWS,
+                max_bytes=config.MAX_RESULT_BYTES,
+            )
+        return run
+
+    deps = Deps(
+        authorize=authorize,
+        get_schema=lambda ds: permitted_schema(role, ds),
+        get_profile=get_profile,
+        guard=validate_candidate,
+        execute=lambda ds, sql, params: execute(ds)(sql, params),
+        validate_result=validate_result,
+        generate=client.generate,
+        audit=write_audit_event,
+        save_evidence=make_evidence_saver(metadata_db.save_evidence, config.MODEL_NAME),
+    )
+    return deps
