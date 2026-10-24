@@ -4,7 +4,9 @@ Owner: Kartik | Branch: task01_kar/repo (includes Devansh's feat/devansh-agent e
 
 ## Run record
 - Command: `pytest -q` (from `backend/`)
-- Result: **200 passed, 0 failed, 1 warning** (Starlette/httpx TestClient deprecation)
+- Result: **235 passed, 0 failed, 1 warning** (Starlette/httpx TestClient deprecation)
+- Lane C focused command: `pytest -q tests/test_sql_guard.py tests/test_executor.py tests/test_policy.py tests/test_api.py tests/test_audit.py tests/test_metadata_db.py tests/test_no_egress.py tests/test_prompts.py`
+- Lane C focused result: **143 passed, 0 failed, 1 warning**
 - Machine: Windows 11 Version 23H2 (OS Build 22631.9711), Python 3.12.10
 - Date: 2026-10-25
 - Network state during this run: not recorded (do not cite as offline). The offline evidence is in `docs/no_egress_test.md` (127 passed, stub agent).
@@ -79,9 +81,9 @@ Selected test bodies were reviewed for the hash and protected-column checks.
 | Real `analyze()` + Ollama offline | agent + model needed | NOT RUN |
 | Hash-chained audit (T-021, stretch) | not built | NOT RUN |
 
-## Out of Lane C (not in my 194 tests)
-Profiler, result checks, ingestion (Khushi) have no test files in this branch.
-Repair cap, abstention, evidence completeness (Devansh) have `test_agent.py`; names not yet reviewed.
+## Out of Lane C
+Profiler, result checks, ingestion and scenarios are Khushi-owned modules with their own tests.
+Repair cap, abstention and evidence completeness are Devansh-owned checks in `test_agent.py`; real Ollama evaluation remains not run.
 
 ## Known gaps to close
 1. Re-run offline once Devansh's real agent and Ollama are ready.
