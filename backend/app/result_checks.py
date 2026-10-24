@@ -1,5 +1,73 @@
+"""Result checks (Lane B). Mechanical checks only; never claims semantic certainty."""
+import math
+import re
+
 from app.contracts import QueryOutcome, ValidationReport
 
 
+def _check(code, status, detail):
+    return {"code": code, "status": status, "detail": detail}
+
+
+def _used_columns(sql, profile):
+    """(table, column, info) for profiled columns whose table AND column name appear in the SQL."""
+    out = []
+    for table, cols in (profile or {}).items():
+        if not isinstance(cols, dict) or not re.search(rf"\b{re.escape(table)}\b", sql, re.I):
+            continue
+        for col, info in cols.items():
+            if col == "__table__" or not isinstance(info, dict):
+                continue
+            if re.search(rf"\b{re.escape(col)}\b", sql, re.I):
+                out.append((table, col, info))
+    return out
+
+
 def validate_result(question: str, sql: str, outcome: QueryOutcome, profile: dict) -> ValidationReport:
-    return ValidationReport(acceptable=True)  # STUB: Khushi likhegi
+    checks, warnings = [], []
+
+    if outcome.status != "OK":
+        checks.append(_check("EXECUTION_NOT_OK", "BLOCKED", "Query did not complete successfully."))
+        return ValidationReport(acceptable=False, checks=checks, warnings=warnings)
+
+    rows = outcome.rows or []
+
+    if not rows:
+        w = "No rows matched the current filters."  # not proof the entity does not exist
+        checks.append(_check("EMPTY_RESULT", "WARNING", w))
+        warnings.append(w)
+    else:
+        cells = [v for r in rows for v in r]
+        if all(v is None for v in cells):
+            checks.append(_check("ALL_NULL", "BLOCKED", "Every returned value is NULL; no zero is invented."))
+            return ValidationReport(acceptable=False, checks=checks, warnings=warnings)
+        if any(isinstance(v, float) and not math.isfinite(v) for v in cells):
+            checks.append(_check("NON_FINITE", "BLOCKED", "Result contains NaN or infinity."))
+            return ValidationReport(acceptable=False, checks=checks, warnings=warnings)
+        checks.append(_check("RESULT_SHAPE", "PASS", f"{len(rows)} row(s) returned."))
+
+    if outcome.truncated:
+        w = "Result was truncated at the row/byte cap; do not total it."
+        checks.append(_check("TRUNCATED", "WARNING", w))
+        warnings.append(w)
+
+    for table, col, info in _used_columns(sql, profile):
+        missing = (info.get("blank") or 0) + (info.get("missing_marker") or 0)
+        if missing:
+            w = f"{table}.{col} has {missing} blank/missing-marker values that are not real data."
+            checks.append(_check("MISSING_MARKERS", "WARNING", w))
+            warnings.append(w)
+        if info.get("ambiguous"):
+            w = f"{table}.{col} has {info['ambiguous']} ambiguous dates (dd/mm vs mm/dd)."
+            checks.append(_check("AMBIGUOUS_DATES", "WARNING", w))
+            warnings.append(w)
+        if info.get("unparseable"):
+            w = f"{table}.{col} has {info['unparseable']} unparseable dates; period filters may skip them."
+            checks.append(_check("UNPARSEABLE_DATES", "WARNING", w))
+            warnings.append(w)
+        if info.get("mixed_precision"):
+            w = f"{table}.{col} mixes full dates and year-only values."
+            checks.append(_check("MIXED_DATE_PRECISION", "WARNING", w))
+            warnings.append(w)
+
+    return ValidationReport(acceptable=True, checks=checks, warnings=warnings)
