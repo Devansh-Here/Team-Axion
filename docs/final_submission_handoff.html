@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Team Axion — Final Submission Handoff</title>
+  <style>
+    @page { size: A4; margin: 16mm 15mm 17mm; }
+    :root { --navy:#12304a; --blue:#1b6ca8; --ink:#1d2730; --muted:#5d6b75; --line:#dbe3e8; --soft:#f3f7f9; --green:#0d6b48; --amber:#8a5a00; }
+    * { box-sizing: border-box; }
+    body { font-family: Arial, Helvetica, sans-serif; color:var(--ink); font-size:10.5pt; line-height:1.42; margin:0; }
+    h1 { color:var(--navy); font-size:26pt; margin:0 0 5px; }
+    h2 { color:var(--navy); font-size:16pt; margin:22px 0 8px; border-bottom:2px solid var(--blue); padding-bottom:4px; }
+    h3 { color:var(--blue); font-size:12pt; margin:15px 0 5px; }
+    p { margin:6px 0 9px; }
+    ul, ol { margin:5px 0 10px 21px; padding:0; }
+    li { margin:3px 0; }
+    code { font-family: Consolas, "Courier New", monospace; font-size:9pt; background:#eef2f4; padding:1px 3px; border-radius:3px; }
+    pre { background:#17232d; color:#f6f8fa; padding:10px 12px; border-radius:5px; white-space:pre-wrap; font:8.5pt/1.35 Consolas, "Courier New", monospace; }
+    table { width:100%; border-collapse:collapse; margin:7px 0 12px; font-size:9.3pt; }
+    th { background:var(--navy); color:white; text-align:left; }
+    th, td { border:1px solid var(--line); padding:6px 7px; vertical-align:top; }
+    tr:nth-child(even) td { background:#fbfcfd; }
+    .cover { border-left:7px solid var(--blue); padding:15px 18px; background:linear-gradient(90deg,#f2f8fc,#fff); margin-bottom:18px; }
+    .subtitle { color:var(--muted); font-size:13pt; margin:0 0 8px; }
+    .meta { color:var(--muted); font-size:9pt; }
+    .callout { border:1px solid #b8d2e2; background:#f2f8fc; border-radius:5px; padding:9px 11px; margin:9px 0; }
+    .warning { border-color:#e6c98b; background:#fff8e8; }
+    .success { border-color:#b8dbc9; background:#f0faf5; }
+    .pill { display:inline-block; padding:2px 7px; border-radius:12px; font-size:8.5pt; font-weight:bold; background:#e8f4ee; color:var(--green); }
+    .open { background:#fff1cc; color:var(--amber); }
+    .small { font-size:9pt; color:var(--muted); }
+    .page-break { page-break-before:always; }
+    .footer-note { margin-top:22px; padding-top:8px; border-top:1px solid var(--line); color:var(--muted); font-size:8.5pt; }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <h1>Team Axion</h1>
+    <p class="subtitle">Final Hackathon Submission Handoff</p>
+    <p class="meta"><strong>Project:</strong> Hypnexis AI-02 &nbsp;|&nbsp; <strong>Snapshot:</strong> October 25, 2026 &nbsp;|&nbsp; <strong>Owner context:</strong> Kartik / Team Axion</p>
+  </section>
+
+  <div class="callout success"><strong>Current outcome:</strong> Lane B and Lane C implementation work is tested on <code>task01_kar/repo</code>. The remaining work is to safely integrate Devansh's latest Lane A branch, resolve the known conflicts, run the merged tests, and submit through a reviewed PR into <code>main</code>.</div>
+
+  <h2>1. Repository snapshot</h2>
+  <table>
+    <tr><th>Item</th><th>Current value</th></tr>
+    <tr><td>App workspace</td><td><code>D:\WEBdev\Terragotrail\TGT\Team-Axion</code></td></tr>
+    <tr><td>User's local clone</td><td><code>C:\Users\Kartik\Documents\GitHub\Team-Axion</code></td></tr>
+    <tr><td>Remote</td><td><code>https://github.com/Devansh-Here/Team-Axion.git</code></td></tr>
+    <tr><td>Tested branch</td><td><code>task01_kar/repo</code></td></tr>
+    <tr><td>Latest tested revision</td><td><code>5dcef4e docs(security): update lane c evidence</code></td></tr>
+    <tr><td>Target branch</td><td><code>main</code>, currently behind the feature work</td></tr>
+    <tr><td>Devansh branch</td><td><code>origin/feat/devansh-agent</code> at <code>16346d0</code></td></tr>
+  </table>
+  <p class="small">The app workspace and the user's local PowerShell clone are different checkouts. The merge conflict reported below occurred in the user's local clone.</p>
+
+  <h2>2. Completed work</h2>
+  <h3>Lane C — Kartik / security and execution</h3>
+  <ul>
+    <li>SQL AST guard and read-only SQLite execution.</li>
+    <li>Protected-field enforcement for <code>employees.salary</code> across direct access, CTEs, aliases, subqueries, filters, grouping, ordering, <code>HAVING</code>, <code>UNION</code>, window functions and <code>CASE</code>.</li>
+    <li>Role/dataset policy, safe errors, parameter binding, row/byte caps and timeouts.</li>
+    <li>Metadata DB, audit events, SQL hashing and protected-text redaction.</li>
+    <li>Loopback/no-egress checks and security evidence documentation.</li>
+  </ul>
+  <p><strong>Key commits:</strong> <code>e887d48</code>, <code>5dcef4e</code></p>
+
+  <h3>Lane B — Khushi / data quality and UI</h3>
+  <ul>
+    <li>Profiler, result checks, CSV/XLSX ingestion and deterministic analytics.</li>
+    <li>Evidence-first frontend served by FastAPI.</li>
+    <li>Bounded low/base/high scenario calculations with explicit assumptions.</li>
+    <li>Evaluation harness, fixed synthetic cases, honest results report and B8 ablation template.</li>
+  </ul>
+  <p><strong>Key commits:</strong> <code>9c24bbf</code>, <code>185bd67</code>, <code>92ad5c6</code>, <code>01c9cb8</code>, <code>89eb845</code>, <code>7f885fb</code>, <code>4388b35</code></p>
+
+  <h3>Lane A — Devansh / available remotely</h3>
+  <p>The remote branch contains model client, prompts, intent/schema linking, agent loop, answer composition, wiring, and demo-script work. Relevant commits include <code>161c74b</code>, <code>e3fa049</code>, <code>0f2cb48</code>, <code>e7cf083</code> and <code>16346d0</code>.</p>
+
+  <h2>3. Verification evidence</h2>
+  <table>
+    <tr><th>Check</th><th>Command/result</th><th>Status</th></tr>
+    <tr><td>Full backend suite</td><td><code>pytest -q</code> from <code>backend/</code><br><strong>235 passed, 1 warning</strong></td><td><span class="pill">PASS</span></td></tr>
+    <tr><td>Lane C focused tests</td><td>SQL guard, executor, policy, API, audit, metadata, no-egress and prompt tests<br><strong>143 passed, 1 warning</strong></td><td><span class="pill">PASS</span></td></tr>
+    <tr><td>Scenario tests</td><td><code>pytest -q tests/test_scenarios.py</code><br><strong>6 passed</strong></td><td><span class="pill">PASS</span></td></tr>
+    <tr><td>Deprecation warning</td><td>Existing Starlette/httpx <code>TestClient</code> warning</td><td><span class="pill open">KNOWN</span></td></tr>
+  </table>
+  <p>The warning is not a test failure. Dependencies were not changed just to hide it.</p>
+
+  <h2>4. Known merge conflict and safe recovery</h2>
+  <p>The user attempted to create <code>final/integration</code>, but that branch already existed. The command failed, and the following merge then ran on <code>task01_kar/repo</code>, creating an in-progress merge with conflicts in:</p>
+  <ul>
+    <li><code>backend/app/profiler.py</code></li>
+    <li><code>backend/app/result_checks.py</code></li>
+    <li><code>backend/tests/test_profiler.py</code></li>
+    <li><code>backend/tests/test_result_checks.py</code></li>
+  </ul>
+  <p>Run this first in the user's local clone. Do not commit until the merge is resolved.</p>
+  <pre>cd "C:\Users\Kartik\Documents\GitHub\Team-Axion"
+  <p>Preserve the tested Lane B behavior while incorporating newer Devansh changes. Do not use <code>reset --hard</code>, delete branches, or force-push.</p>
+
+  <h2>5. Live demo</h2>
+  <p>Run from the user's local checkout:</p>
+  <pre>cd "C:\Users\Kartik\Documents\GitHub\Team-Axion\backend"
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000</pre>
+  <p>Open <code>http://127.0.0.1:8000/</code>. In a second PowerShell window:</p>
+  <pre>Invoke-RestMethod http://127.0.0.1:8000/api/v1/health
+Invoke-RestMethod http://127.0.0.1:8000/api/v1/datasets
+Invoke-RestMethod http://127.0.0.1:8000/api/v1/datasets/demo/profile</pre>
+  <p>Show the evidence-first UI, safe schema/profile output, protected-field removal, and saved evidence/audit behavior. Never present stub output as a real Ollama result.</p>
+
+  <h2>6. Honest open items</h2>
+  <div class="callout warning">
+    <ul>
+      <li>Real <code>analyze()</code> with Ollama while offline: <strong>NOT RUN</strong>.</li>
+      <li>Full 50–100 question benchmark: <strong>TBD / NOT RUN</strong>.</li>
+      <li>B8 ablation metrics, accuracy and latency: <strong>TBD / NOT RUN</strong>.</li>
+      <li>Held-out split and hardware/runtime record: <strong>TBD / NOT RUN</strong>.</li>
+      <li>Hash-chained audit stretch item: <strong>NOT RUN</strong>.</li>
+    </ul>
+  </div>
+  <p>Supporting files: <code>docs/safe_sql_checklist.md</code>, <code>docs/no_egress_test.md</code>, <code>outputs/RESULTS.md</code>, and <code>outputs/ABLATION.md</code>.</p>
+
+  <h2>7. Final submission sequence</h2>
+  <ol>
+    <li>Abort the accidental merge on <code>task01_kar/repo</code>.</li>
+    <li>Switch to the existing <code>final/integration</code> branch.</li>
+    <li>Merge <code>origin/feat/devansh-agent</code>.</li>
+    <li>Resolve the four known conflicts and run the full test suite.</li>
+    <li>Run the live demo and smoke checks on <code>127.0.0.1</code>.</li>
+    <li>Commit and push <code>final/integration</code>.</li>
+    <li>Open a PR: base <code>main</code>, compare <code>final/integration</code>.</li>
+    <li>Review the diff/checks, merge the PR, pull <code>main</code>, and rerun tests.</li>
+  </ol>
+
+  <div class="footer-note">Prepared from the current Team Axion coding session. This document records observed results and explicitly preserves unrun evaluation items as open.</div>
+</body>
+</html>

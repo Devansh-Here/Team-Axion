@@ -3,129 +3,96 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Hypnexis AI-02 | Workspace</title>
+    <title>Hypnexis AI-02 | Evidence Workspace</title>
     <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
     <header class="topbar">
-      <div>
-        <p class="eyebrow">HYPNEXIS AI-02</p>
-        <h1>Evidence-first data analyst</h1>
+      <div class="brand-lockup">
+        <div class="brand-mark" aria-hidden="true">H</div>
+        <div>
+          <p class="eyebrow">HYPNEXIS AI-02</p>
+          <h1>Evidence-first data analyst</h1>
+          <p class="subtitle">Local intelligence for messy business data</p>
+        </div>
       </div>
-      <div class="badges" aria-label="Runtime status">
-        <span id="api-status" class="badge badge-muted">API checking…</span>
-        <span class="badge badge-role">Role: Analyst (server-resolved)</span>
+      <div class="topbar-meta">
+        <span id="api-status" class="status-chip status-muted"><span class="status-dot"></span>Checking API…</span>
+        <span id="role-badge" class="role-chip">Role: Analyst</span>
+        <span class="model-chip">Local-first</span>
       </div>
     </header>
 
-    <div class="layout">
+    <div class="app-shell">
       <aside class="sidebar" aria-label="Workspace navigation">
-        <button class="nav-button active" data-view="workspace">Workspace</button>
-        <button class="nav-button" data-view="profile">Data profile</button>
-        <button class="nav-button" data-view="permissions">Permissions</button>
-        <button class="nav-button" data-view="audit">Audit</button>
-        <div class="sidebar-note">
+        <div class="sidebar-label">Workspace</div>
+        <nav class="nav-stack">
+          <button class="nav-button active" data-view="workspace"><span class="nav-icon">⌂</span>Workspace</button>
+          <button class="nav-button" data-view="profile"><span class="nav-icon">▦</span>Data profile</button>
+          <button class="nav-button" data-view="insights"><span class="nav-icon">◒</span>Insights</button>
+          <button class="nav-button" data-view="import"><span class="nav-icon">↥</span>Import</button>
+          <button class="nav-button" data-view="permissions"><span class="nav-icon">◉</span>Permissions</button>
+          <button class="nav-button" data-view="audit"><span class="nav-icon">≋</span>Audit</button>
+          <button class="nav-button" data-view="evaluation"><span class="nav-icon">▥</span>Evaluation</button>
+          <button class="nav-button" data-view="settings"><span class="nav-icon">⚙</span>Settings</button>
+        </nav>
+        <div class="sidebar-spacer"></div>
+        <div class="safety-card">
+          <div class="safety-icon">✓</div>
           <strong>Safety boundary</strong>
-          <p>The model suggests. The backend policy and SQL guard decide.</p>
+          <p>The model suggests. Policy decides. The database executes only guarded SQL.</p>
         </div>
+        <p class="sidebar-footer">v0.1 · Local workspace</p>
       </aside>
 
       <main class="content">
+        <div id="page-error" class="alert alert-error" role="alert" hidden></div>
+        <div id="offline-message" class="alert alert-warning" role="status" hidden>
+          Local model unavailable. Profile and deterministic insights remain available. Retry the analysis when Ollama is ready.
+        </div>
+
         <section id="workspace-view" class="view" aria-labelledby="workspace-title">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">WORKSPACE</p>
-              <h2 id="workspace-title">Ask your business data</h2>
-            </div>
-            <label class="dataset-control">Dataset
-              <select id="dataset-select" aria-label="Dataset"></select>
-            </label>
+          <div class="page-heading">
+            <div><p class="eyebrow">WORKSPACE</p><h2 id="workspace-title">Ask your business data</h2><p class="heading-copy">Turn messy databases into answers you can inspect and trust.</p></div>
+            <label class="dataset-control">Dataset<select id="dataset-select" aria-label="Dataset"></select></label>
           </div>
 
-          <div id="page-error" class="alert alert-error" role="alert" hidden></div>
-          <div id="offline-message" class="alert alert-warning" role="status" hidden>
-            Local model unavailable. You can still inspect the profile; retry the analysis when Ollama is ready.
+          <div class="metric-strip">
+            <div class="metric-card"><span class="metric-label">Dataset</span><strong id="dataset-metric">—</strong><small>Permitted workspace</small></div>
+            <div class="metric-card"><span class="metric-label">Model</span><strong>Local-first</strong><small>Loopback only</small></div>
+            <div class="metric-card"><span class="metric-label">Evidence</span><strong>Every run</strong><small>SQL · checks · profile</small></div>
+            <div class="metric-card accent"><span class="metric-label">Protected data</span><strong>Guarded</strong><small>Never shown in UI</small></div>
           </div>
 
           <form id="question-form" class="question-card">
-            <label for="question">Question</label>
-            <textarea id="question" rows="3" maxlength="2000" required
-              placeholder="Which categories had lower net sales in 2025 than 2024?"></textarea>
-            <div class="form-footer">
-              <div class="examples" aria-label="Example questions">
-                <button type="button" class="example-button">Total net sales by category in 2025</button>
-                <button type="button" class="example-button">Which regions have missing sales values?</button>
-              </div>
-              <button id="analyze-button" class="primary-button" type="submit">Analyze</button>
-            </div>
+            <div class="card-heading"><div><span class="section-kicker">ASK A QUESTION</span><h3>What would you like to understand?</h3></div><span class="privacy-note">◉ Backend-controlled access</span></div>
+            <label class="sr-only" for="question">Question</label>
+            <textarea id="question" rows="3" maxlength="2000" required placeholder="Which categories had lower net sales in 2025 than 2024?"></textarea>
+            <div class="form-footer"><div class="examples" aria-label="Example questions"><button type="button" class="example-button">Total net sales by category in 2025</button><button type="button" class="example-button">Which regions have missing sales values?</button><button type="button" class="example-button">Which product had the biggest decline?</button></div><button id="analyze-button" class="primary-button" type="submit"><span>Analyze</span><span aria-hidden="true">→</span></button></div>
           </form>
 
           <section class="timeline-card" aria-labelledby="timeline-title">
-            <div class="section-heading compact">
-              <h3 id="timeline-title">Run stages</h3>
-              <span id="run-id" class="run-id">No run yet</span>
-            </div>
+            <div class="section-heading compact"><div><span class="section-kicker">TRACEABLE PIPELINE</span><h3 id="timeline-title">Run stages</h3></div><span id="run-id" class="run-id">No run yet</span></div>
             <ol id="stage-list" class="stage-list">
-              <li data-stage="schema_selected"><span class="stage-dot"></span><span>Schema selected</span><strong>Waiting</strong></li>
-              <li data-stage="sql_generated"><span class="stage-dot"></span><span>SQL generated</span><strong>Waiting</strong></li>
-              <li data-stage="executed"><span class="stage-dot"></span><span>Query executed</span><strong>Waiting</strong></li>
-              <li data-stage="validation"><span class="stage-dot"></span><span>Result validated</span><strong>Waiting</strong></li>
-              <li data-stage="final"><span class="stage-dot"></span><span>Final outcome</span><strong>Waiting</strong></li>
+              <li data-stage="policy"><span class="stage-dot"></span><span>Policy</span><strong>Waiting</strong></li><li data-stage="intent"><span class="stage-dot"></span><span>Intent</span><strong>Waiting</strong></li><li data-stage="schema_selected"><span class="stage-dot"></span><span>Schema</span><strong>Waiting</strong></li><li data-stage="sql_generated"><span class="stage-dot"></span><span>SQL</span><strong>Waiting</strong></li><li data-stage="executed"><span class="stage-dot"></span><span>Execute</span><strong>Waiting</strong></li><li data-stage="validation"><span class="stage-dot"></span><span>Validate</span><strong>Waiting</strong></li><li data-stage="final"><span class="stage-dot"></span><span>Final</span><strong>Waiting</strong></li>
             </ol>
           </section>
 
           <section id="answer-card" class="answer-card" aria-live="polite" hidden>
-            <div class="section-heading compact">
-              <div>
-                <p class="eyebrow">OUTCOME</p>
-                <h3 id="outcome-status">Waiting</h3>
-              </div>
-              <span id="evidence-id" class="run-id"></span>
-            </div>
-            <p id="answer-text" class="answer-text"></p>
-            <ul id="warnings" class="warning-list"></ul>
-            <div class="tabs" role="tablist" aria-label="Evidence details">
-              <button class="tab-button active" role="tab" aria-selected="true" data-tab="result-tab">Result</button>
-              <button class="tab-button" role="tab" aria-selected="false" data-tab="checks-tab">Checks</button>
-              <button class="tab-button" role="tab" aria-selected="false" data-tab="evidence-tab">Evidence</button>
-            </div>
-            <div id="result-tab" class="tab-panel" role="tabpanel"></div>
-            <div id="checks-tab" class="tab-panel" role="tabpanel" hidden></div>
-            <div id="evidence-tab" class="tab-panel" role="tabpanel" hidden></div>
+            <div class="section-heading compact"><div><span class="section-kicker">OUTCOME</span><h3 id="outcome-status">Waiting</h3></div><span id="evidence-id" class="run-id"></span></div>
+            <p id="answer-text" class="answer-text"></p><ul id="warnings" class="warning-list"></ul>
+            <div class="tabs" role="tablist" aria-label="Evidence details"><button class="tab-button active" role="tab" aria-selected="true" data-tab="result-tab">Result</button><button class="tab-button" role="tab" aria-selected="false" data-tab="checks-tab">Checks</button><button class="tab-button" role="tab" aria-selected="false" data-tab="evidence-tab">Evidence</button></div>
+            <div id="result-tab" class="tab-panel" role="tabpanel"></div><div id="checks-tab" class="tab-panel" role="tabpanel" hidden></div><div id="evidence-tab" class="tab-panel" role="tabpanel" hidden></div>
           </section>
         </section>
 
-        <section id="profile-view" class="view" aria-labelledby="profile-title" hidden>
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">DATA PROFILE</p>
-              <h2 id="profile-title">Permitted schema and quality signals</h2>
-            </div>
-            <button id="refresh-profile" class="secondary-button" type="button">Refresh profile</button>
-          </div>
-          <div id="profile-content" class="profile-grid"></div>
-        </section>
-
-        <section id="permissions-view" class="view" aria-labelledby="permissions-title" hidden>
-          <p class="eyebrow">PERMISSIONS</p>
-          <h2 id="permissions-title">Backend-controlled access</h2>
-          <div class="info-card">
-            <p><strong>Role:</strong> Analyst (resolved by the backend)</p>
-            <p><strong>Policy:</strong> Protected columns are removed before model context and checked again before execution.</p>
-            <p><strong>Protected example:</strong> employee salary is not exposed in the analyst schema.</p>
-          </div>
-        </section>
-
-        <section id="audit-view" class="view" aria-labelledby="audit-title" hidden>
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">AUDIT</p>
-              <h2 id="audit-title">Recent run events</h2>
-            </div>
-            <button id="refresh-audit" class="secondary-button" type="button">Refresh audit</button>
-          </div>
-          <div id="audit-content" class="table-wrap"></div>
-        </section>
+        <section id="profile-view" class="view" aria-labelledby="profile-title" hidden><div class="page-heading"><div><p class="eyebrow">DATA PROFILE</p><h2 id="profile-title">Know the shape of your data</h2><p class="heading-copy">Quality signals are measured before the model is asked to reason.</p></div><button id="refresh-profile" class="secondary-button" type="button">↻ Refresh profile</button></div><div id="profile-content" class="profile-grid"></div></section>
+        <section id="insights-view" class="view" aria-labelledby="insights-title" hidden><div class="page-heading"><div><p class="eyebrow">INSIGHTS</p><h2 id="insights-title">Deterministic first-look insights</h2><p class="heading-copy">Observed patterns only — never causal claims.</p></div><button id="refresh-insights" class="secondary-button" type="button">↻ Refresh insights</button></div><div id="insights-content" class="insights-grid"></div></section>
+        <section id="import-view" class="view" aria-labelledby="import-title" hidden><div class="page-heading"><div><p class="eyebrow">IMPORT</p><h2 id="import-title">Bring in a messy file</h2><p class="heading-copy">CSV and XLSX import with limits, warnings and a source hash.</p></div></div><div class="import-layout"><form id="import-form" class="import-card"><label for="import-file" class="file-drop"><span class="upload-icon">↥</span><strong>Choose a CSV or XLSX file</strong><small>Up to the configured upload limit · local only</small><input id="import-file" type="file" accept=".csv,.xlsx"></label><button class="primary-button" type="submit"><span>Validate and import</span><span>→</span></button></form><div id="import-result" class="info-card"><p class="empty">Your import summary will appear here.</p></div></div></section>
+        <section id="permissions-view" class="view" aria-labelledby="permissions-title" hidden><div class="page-heading"><div><p class="eyebrow">PERMISSIONS</p><h2 id="permissions-title">Access is decided by the backend</h2><p class="heading-copy">This page displays policy. It never grants access.</p></div></div><div id="permissions-content" class="permissions-grid"></div></section>
+        <section id="audit-view" class="view" aria-labelledby="audit-title" hidden><div class="page-heading"><div><p class="eyebrow">AUDIT</p><h2 id="audit-title">Recent run events</h2><p class="heading-copy">Trace what happened without storing protected SQL text.</p></div><button id="refresh-audit" class="secondary-button" type="button">↻ Refresh audit</button></div><div id="audit-content" class="table-wrap"></div></section>
+        <section id="evaluation-view" class="view" aria-labelledby="evaluation-title" hidden><div class="page-heading"><div><p class="eyebrow">EVALUATION</p><h2 id="evaluation-title">Measured, not imagined</h2><p class="heading-copy">Only measured metrics are displayed. Everything else stays NOT RUN.</p></div><button id="refresh-evaluation" class="secondary-button" type="button">↻ Refresh evaluation</button></div><div id="evaluation-content" class="evaluation-grid"></div></section>
+        <section id="settings-view" class="view" aria-labelledby="settings-title" hidden><div class="page-heading"><div><p class="eyebrow">SETTINGS</p><h2 id="settings-title">Runtime guardrails</h2><p class="heading-copy">Read-only configuration for this local workspace.</p></div></div><div id="settings-content" class="settings-grid"></div></section>
       </main>
     </div>
     <script src="/app.js" defer></script>

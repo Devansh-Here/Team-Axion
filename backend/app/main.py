@@ -1,6 +1,10 @@
 """FastAPI /api/v1. Safe errors only, role server-side, loopback only.
 Run: uvicorn app.main:app --host 127.0.0.1 --port 8000
 """
+import base64
+import binascii
+import hashlib
+import json
 import sqlite3
 import uuid
 from contextlib import asynccontextmanager
@@ -19,6 +23,9 @@ from app.policy import permitted_schema, resolve_role
 
 MAX_QUESTION_CHARS = 2000
 _PROTECTED_KEYS = {"salary"}  # protected column naam (kisi bhi level pe drop)
+_IMPORTS_DIR = Path(config.DATA_DIR) / "imports"
+_RESULTS_FILE = Path(__file__).resolve().parents[2] / "outputs" / "RESULTS.md"
+_ABLATION_FILE = Path(__file__).resolve().parents[2] / "outputs" / "ABLATION.md"
 
 
 class ApiError(Exception):
@@ -43,6 +50,49 @@ def _strip(obj):
     if isinstance(obj, list):
         return [_strip(v) for v in obj]
     return obj
+
+
+def _safe_read(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+
+
+def _evaluation_payload() -> dict:
+    results = _safe_read(_RESULTS_FILE)
+    ablation = _safe_read(_ABLATION_FILE)
+    case_count = 0
+    cases_path = _RESULTS_FILE.parent / "evaluation_cases.json"
+    try:
+        case_count = len(json.loads(cases_path.read_text(encoding="utf-8")))
+    except (OSError, ValueError, TypeError):
+        pass
+    return {
+        "status": "TBD / NOT RUN",
+        "fixed_smoke_cases": case_count,
+        "metrics": {
+            "execution_accuracy": None,
+            "valid_sql_rate": None,
+            "repair_success": None,
+            "abstention_precision": None,
+            "abstention_recall": None,
+            "median_latency_ms": None,
+            "p95_latency_ms": None,
+        },
+        "ablation": [
+            {"configuration": "One-shot baseline", "execution_accuracy": None, "valid_sql_rate": None, "median_latency_ms": None, "p95_latency_ms": None},
+            {"configuration": "+ schema/profile", "execution_accuracy": None, "valid_sql_rate": None, "median_latency_ms": None, "p95_latency_ms": None},
+            {"configuration": "+ repair/checks", "execution_accuracy": None, "valid_sql_rate": None, "median_latency_ms": None, "p95_latency_ms": None},
+            {"configuration": "Final system", "execution_accuracy": None, "valid_sql_rate": None, "median_latency_ms": None, "p95_latency_ms": None},
+        ],
+        "source_documents": {
+            "results": str(_RESULTS_FILE),
+            "ablation": str(_ABLATION_FILE),
+            "results_excerpt": results[:1200],
+            "ablation_excerpt": ablation[:1200],
+        },
+    }
 
 
 @asynccontextmanager
@@ -128,6 +178,118 @@ def dataset_profile(dataset_id: str):
         if conn is not None:
             conn.close()
     return {"dataset_id": dataset_id, "profile": _strip(profile)}
+
+
+@router.get("/datasets/{dataset_id}/insights")
+def dataset_insights(dataset_id: str):
+    """Return deterministic, profile-backed first-look insight data."""
+    schema = permitted_schema(resolve_role(), dataset_id)
+    ds = metadata_db.get_dataset(dataset_id)
+    if not schema or ds is None:
+        raise ApiError(404, "DATASET_NOT_FOUND", "Dataset not found.")
+    conn = None
+    try:
+        from app.analytics import missingness_hotspots
+        from app.profiler import profile_columns
+        uri = f"{Path(ds['db_path']).resolve().as_uri()}?mode=ro"
+        conn = sqlite3.connect(uri, uri=True)
+        profile = _strip(profile_columns(conn, list(schema)))
+        hotspots = missingness_hotspots(profile)
+        table_summary = [
+            {"table": table, "rows": details.get("row_count", 0), "columns": details.get("column_count", 0)}
+            for table, details in profile.items()
+        ]
+    except Exception:
+        raise ApiError(503, "INSIGHTS_UNAVAILABLE", "Insights are not available.", retryable=True)
+    finally:
+        if conn is not None:
+            conn.close()
+    return {
+        "dataset_id": dataset_id,
+        "classification": "observed_profile_insights",
+        "table_summary": table_summary,
+        "missingness_hotspots": hotspots,
+        "warnings": ["Profile-backed only; no causal conclusion is made."],
+    }
+
+
+@router.get("/permissions")
+def permissions(dataset_id: str = Query("demo")):
+    role = resolve_role()
+    schema = permitted_schema(role, dataset_id)
+    if not schema:
+        return {"role": role, "action": "DENY", "allowed_tables": [], "allowed_columns": [], "reason_code": "NO_PERMITTED_SCHEMA"}
+    return {
+        "role": role,
+        "action": "ALLOW",
+        "allowed_tables": sorted(schema),
+        "allowed_columns": sorted(f"{table}.{column}" for table, columns in schema.items() for column in columns),
+        "reason_code": "ROLE_RESOLVED_BY_BACKEND",
+        "notice": "This page displays access; it does not grant access.",
+    }
+
+
+@router.get("/evaluation")
+def evaluation():
+    return _evaluation_payload()
+
+
+@router.get("/settings")
+def settings():
+    return {
+        "model": {"name": config.MODEL_NAME, "base_url": "loopback-only", "status": "LOCAL CONFIGURATION"},
+        "limits": {
+            "max_query_seconds": config.MAX_QUERY_SECONDS,
+            "max_result_rows": config.MAX_RESULT_ROWS,
+            "max_result_bytes": config.MAX_RESULT_BYTES,
+            "max_repair_attempts": config.MAX_REPAIR_ATTEMPTS,
+            "max_upload_mb": config.MAX_UPLOAD_MB,
+        },
+        "retention": "Metadata stores runs, evidence and audit records locally.",
+    }
+
+
+@router.post("/datasets/import")
+async def import_dataset(request: Request):
+    """Import a CSV/XLSX supplied as base64 JSON to avoid multipart dependencies."""
+    payload = await request.json()
+    filename = str(payload.get("filename", "")).strip()
+    encoded = payload.get("content_base64")
+    if not filename or not isinstance(encoded, str):
+        raise ApiError(422, "INVALID_IMPORT", "A filename and file content are required.")
+    try:
+        content = base64.b64decode(encoded, validate=True)
+    except (binascii.Error, ValueError):
+        raise ApiError(422, "INVALID_IMPORT", "The uploaded file content is not valid.")
+    suffix = Path(filename).suffix.lower()
+    if suffix not in {".csv", ".xlsx"}:
+        raise ApiError(422, "UNSUPPORTED_FILE", "Only CSV and XLSX files are supported.")
+    if len(content) > config.MAX_UPLOAD_MB * 1024 * 1024:
+        raise ApiError(413, "FILE_TOO_LARGE", "The uploaded file exceeds the size limit.")
+    from app.ingestion import ingest_file
+    _IMPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    token = uuid.uuid4().hex[:12]
+    source = _IMPORTS_DIR / f"{token}_{Path(filename).name}"
+    database = _IMPORTS_DIR / f"{token}.sqlite"
+    source.write_bytes(content)
+    try:
+        summary = ingest_file(source, database, max_bytes=config.MAX_UPLOAD_MB * 1024 * 1024)
+        dataset_id = f"import_{token}"
+        digest = hashlib.sha256(content).hexdigest()
+        metadata_db.upsert_dataset(dataset_id, str(database), digest)
+    except ValueError as exc:
+        for path in (source, database):
+            try:
+                path.unlink()
+            except FileNotFoundError:
+                pass
+        raise ApiError(422, "IMPORT_REJECTED", str(exc))
+    finally:
+        try:
+            source.unlink()
+        except FileNotFoundError:
+            pass
+    return {"dataset_id": dataset_id, "source_sha256": digest, "summary": summary}
 
 
 @router.post("/analyze")

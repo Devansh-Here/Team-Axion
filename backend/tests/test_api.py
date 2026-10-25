@@ -1,3 +1,5 @@
+import base64
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -101,3 +103,49 @@ def test_workspace_ui_is_served(client):
     r = client.get("/")
     assert r.status_code == 200
     assert "Evidence-first data analyst" in r.text
+
+
+def test_insights_permissions_evaluation_and_settings_routes(client):
+    insights = client.get(f"{BASE}/datasets/demo/insights")
+    assert insights.status_code == 200
+    assert insights.json()["classification"] == "observed_profile_insights"
+    assert "employees.salary" not in insights.text.lower()
+
+    permissions = client.get(f"{BASE}/permissions?dataset_id=demo")
+    assert permissions.status_code == 200
+    assert permissions.json()["role"] == "analyst"
+    assert "salary" not in permissions.text.lower()
+
+    evaluation = client.get(f"{BASE}/evaluation")
+    assert evaluation.status_code == 200
+    assert evaluation.json()["status"] == "TBD / NOT RUN"
+    assert all(row["execution_accuracy"] is None for row in evaluation.json()["ablation"])
+
+    settings = client.get(f"{BASE}/settings")
+    assert settings.status_code == 200
+    assert settings.json()["model"]["base_url"] == "loopback-only"
+
+
+def test_import_rejects_unsupported_file_without_multipart(client):
+    r = client.post(f"{BASE}/datasets/import", json={
+        "filename": "notes.txt",
+        "content_base64": "aGVsbG8=",
+    })
+    assert r.status_code == 422
+    assert r.json()["error"]["code"] == "UNSUPPORTED_FILE"
+
+
+def test_import_csv_registers_local_dataset(client, monkeypatch, tmp_path):
+    monkeypatch.setattr(main, "_IMPORTS_DIR", tmp_path / "imports")
+    content = b"category,amount\nElectronics,10\nFurniture,20\n"
+    r = client.post(f"{BASE}/datasets/import", json={
+        "filename": "sales.csv",
+        "content_base64": base64.b64encode(content).decode("ascii"),
+    })
+
+    assert r.status_code == 200
+    payload = r.json()
+    assert payload["dataset_id"].startswith("import_")
+    assert payload["summary"]["rows_loaded"] == 2
+    assert payload["source_sha256"]
+    assert payload["dataset_id"] in client.get(f"{BASE}/datasets").json()["datasets"]
