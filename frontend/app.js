@@ -25,6 +25,46 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function displayColumn(value) {
+  return String(value ?? "")
+    .replaceAll("_", " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function displayValue(value) {
+  if (value === null || value === undefined || value === "") return "Not available";
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 }).format(value);
+  }
+  return String(value);
+}
+
+function renderSummary(summary) {
+  const columns = summary.columns || [];
+  const rows = summary.rows || [];
+  if (!rows.length) return '<p class="empty">No rows matched the current filters.</p>';
+  const headers = columns.map((column) => `<th>${escapeHtml(displayColumn(column))}</th>`).join("");
+  const body = rows.map((row) => `<tr>${columns.map((_, index) =>
+    `<td>${escapeHtml(displayValue(row[index]))}</td>`).join("")}</tr>`).join("");
+  const truncated = summary.truncated ? " · Preview is truncated" : "";
+  return `<p class="result-meta">Showing ${rows.length.toLocaleString("en-IN")} of ` +
+    `${Number(summary.row_count || rows.length).toLocaleString("en-IN")} result(s)${truncated}.</p>` +
+    `<div class="table-wrap"><table class="result-table"><thead><tr>${headers}</tr></thead>` +
+    `<tbody>${body}</tbody></table></div>`;
+}
+
+function renderChecks(checks) {
+  if (!checks?.length) return '<p class="empty">No validation checks were recorded.</p>';
+  return `<div class="table-wrap"><table class="result-table"><thead><tr>` +
+    `<th>Status</th><th>Check</th><th>Details</th></tr></thead><tbody>` +
+    checks.map((check) => `<tr><td><span class="status-pill status-${escapeHtml(String(check.status || "").toLowerCase())}">` +
+      `${escapeHtml(check.status || "-")}</span></td><td>${escapeHtml(check.code || "-")}</td>` +
+      `<td>${escapeHtml(check.detail || "-")}</td></tr>`).join("") +
+    `</tbody></table></div>`;
+}
+
 function showError(message) {
   pageError.textContent = message;
   pageError.hidden = !message;
@@ -141,8 +181,8 @@ function renderResult(payload, evidence) {
     return item;
   }));
   const summary = payload.result_summary || {};
-  document.querySelector("#result-tab").innerHTML = `<pre>${escapeHtml(JSON.stringify(summary, null, 2))}</pre>`;
-  document.querySelector("#checks-tab").innerHTML = `<pre>${escapeHtml(JSON.stringify(evidence?.checks || [], null, 2))}</pre>`;
+  document.querySelector("#result-tab").innerHTML = renderSummary(summary);
+  document.querySelector("#checks-tab").innerHTML = renderChecks(evidence?.checks || []);
   document.querySelector("#evidence-tab").innerHTML = `<pre>${escapeHtml(JSON.stringify(evidence || payload, null, 2))}</pre>`;
 }
 

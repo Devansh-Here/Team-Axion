@@ -255,8 +255,18 @@ def test_answer_numbers_come_from_rows_no_causal_words():
     o = QueryOutcome(status="OK", columns=["category", "total"],
                      rows=[["Electronics", 1200.5], ["Furniture", 350]], row_count=2)
     a = compose_answer(o)
-    assert "Electronics" in a and "1200.5" in a and "350" in a
+    assert "Electronics" in a and "1,200.5" in a and "350" in a
+    assert "Category" in a and "Total" in a and "Found 2 result(s)" in a
     assert not any(w in a.lower() for w in ("because", "due to", "caused by"))
+
+
+def test_answer_formats_missing_values_and_multiple_rows():
+    o = QueryOutcome(status="OK", columns=["lifecycle_stage", "contact_count"],
+                     rows=[["Customer", 4], ["Lead", None]], row_count=2)
+    a = compose_answer(o)
+    assert "Lifecycle Stage: Customer" in a
+    assert "Contact Count: 4" in a
+    assert "Not available" in a
 
 def test_real_guard_reject_reason_reaches_evidence_and_repair_prompt():
     """Regression: the real sql_guard.Reject exposes .reason (not .code). Test fakes used .code and hid the bug."""

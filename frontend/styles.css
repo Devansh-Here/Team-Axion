@@ -64,7 +64,7 @@ textarea { display: block; resize: vertical; padding: 14px; line-height: 1.5; }
 .stage-list li.done .stage-dot { background: #6c8d15; }
 .stage-list li.active { background: var(--yellow); color: #76500b; }
 .stage-list li.active .stage-dot { background: #ce9414; }
-.answer-text { margin-bottom: 14px; font-size: 1.2rem; line-height: 1.5; }
+.answer-text { margin-bottom: 14px; white-space: pre-line; font-size: 1.2rem; line-height: 1.6; }
 .warning-list { margin: 0 0 16px; padding-left: 20px; color: #76500b; }
 .tabs { display: flex; gap: 5px; border-bottom: 1px solid var(--line); }
 .tab-button { border: 0; border-bottom: 3px solid transparent; padding: 10px 12px; background: transparent; color: var(--muted); font-weight: 800; }
@@ -82,6 +82,13 @@ th { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-
 .info-card { padding: 18px; line-height: 1.6; }
 .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); padding: 8px; }
 .empty { color: var(--muted); }
+.result-meta { margin: 0 0 10px; color: var(--muted); font-size: 0.82rem; }
+.result-table th { white-space: nowrap; }
+.result-table td { min-width: 120px; }
+.status-pill { display: inline-block; border-radius: 999px; padding: 4px 8px; font-size: 0.7rem; font-weight: 800; }
+.status-pass { background: var(--green); color: #45600d; }
+.status-warning { background: var(--yellow); color: #76500b; }
+.status-blocked { background: var(--red); color: #8e2d22; }
 
 @media (max-width: 800px) {
   .topbar, .section-heading, .form-footer { align-items: stretch; flex-direction: column; }

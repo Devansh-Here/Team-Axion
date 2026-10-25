@@ -1,6 +1,7 @@
 """A5: Agent orchestration. Model suggests; policy decides; guard validates; executor runs; checks verify."""
 import hashlib
 import json
+import math
 import re
 import uuid
 from dataclasses import dataclass, field
@@ -100,15 +101,43 @@ def _parse_model_json(raw: Any) -> Optional[dict]:
     return {"sql": sql, "needs_clarification": nc, "clarification_question": cq, "assumptions": assumptions}
 
 
+def _display_column(column: str) -> str:
+    """Turn SQL-style labels into labels a judge can scan quickly."""
+    return re.sub(r"\s+", " ", str(column).replace("_", " ").strip()).title()
+
+
+def _display_value(value: Any) -> str:
+    """Format values without inventing units or changing their meaning."""
+    if value is None:
+        return "Not available"
+    if isinstance(value, bool):
+        return "Yes" if value else "No"
+    if isinstance(value, int) and not isinstance(value, bool):
+        return f"{value:,}"
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            return "Not available"
+        if value.is_integer():
+            return f"{int(value):,}"
+        return f"{value:,.2f}".rstrip("0").rstrip(".")
+    return str(value)
+
+
 def compose_answer(outcome: QueryOutcome) -> str:
-    """Minimal template; numbers come straight from result rows. A6 will refine."""
+    """Create a readable, evidence-neutral answer from returned rows."""
     if outcome.row_count == 0:
         return "No rows matched the current filters."
-    if len(outcome.columns) == 1 and outcome.row_count == 1:
-        return f"{outcome.columns[0]}: {outcome.rows[0][0]}"
-    if outcome.row_count <= 10:
-        return "; ".join(", ".join(f"{c}: {v}" for c, v in zip(outcome.columns, r)) for r in outcome.rows)
-    return f"{outcome.row_count} rows returned. See the result preview."
+    if outcome.row_count > 10:
+        return f"Found {outcome.row_count:,} rows. See the result table below."
+
+    lines = [f"Found {outcome.row_count:,} result(s):"]
+    for row in outcome.rows:
+        fields = " · ".join(
+            f"{_display_column(column)}: {_display_value(value)}"
+            for column, value in zip(outcome.columns, row)
+        )
+        lines.append(f"• {fields}")
+    return "\n".join(lines)
 
 
 def analyze(request: AnalysisRequest, role: str, deps: Optional[Deps] = None) -> AnalysisOutcome:
