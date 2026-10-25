@@ -73,6 +73,15 @@ def test_dirty_crm_amount_aggregation_is_blocked(tmp_path):
     assert "DIRTY_NUMERIC_AGGREGATION" in codes(rep)
 
 
+def test_dirty_crm_amount_ranking_is_blocked(tmp_path):
+    conn = sqlite3.connect(build_crm(str(tmp_path / "crm.sqlite")))
+    profile = profile_columns(conn, ["deals"])
+    sql = "SELECT deal_id FROM deals ORDER BY amount DESC LIMIT 1"
+    rep = validate_result("largest opportunity", sql, out([["D-107"]]), profile)
+    assert not rep.acceptable
+    assert "DIRTY_NUMERIC_AGGREGATION" in codes(rep)
+
+
 def test_real_demo_db_end_to_end(tmp_path):
     conn = sqlite3.connect(build(str(tmp_path / "d.sqlite")))
     prof = profile_columns(conn, ["sales"])

@@ -37,13 +37,25 @@ def _join_inflation_risk(sql: str) -> bool:
 
 
 def _dirty_numeric_aggregation(sql: str, profile: dict) -> list[tuple[str, str, dict]]:
-    """Return text columns that must not be silently SUM/AVG-coerced."""
-    if not re.search(r"\b(?:sum|avg)\s*\(", sql, re.I):
+    """Return dirty text columns used for unsafe numeric aggregation/ranking."""
+    has_numeric_aggregate = re.search(r"\b(?:sum|avg|max|min)\s*\(", sql, re.I)
+    has_order_by = re.search(r"\border\s+by\b", sql, re.I)
+    if not has_numeric_aggregate and not has_order_by:
         return []
     dirty = []
     for table, col, info in _used_columns(sql, profile):
-        if info.get("type") == "text" and (
-            info.get("blank") or info.get("missing_marker") or info.get("warnings")
+        order_uses_column = re.search(
+            rf"\border\s+by\b[^;]*\b{re.escape(col)}\b", sql, re.I
+        )
+        aggregate_uses_column = re.search(
+            rf"\b(?:sum|avg|max|min)\s*\([^)]*\b{re.escape(col)}\b",
+            sql,
+            re.I,
+        )
+        if (
+            info.get("type") == "text"
+            and (aggregate_uses_column or order_uses_column)
+            and (info.get("blank") or info.get("missing_marker") or info.get("warnings"))
         ):
             dirty.append((table, col, info))
     return dirty
