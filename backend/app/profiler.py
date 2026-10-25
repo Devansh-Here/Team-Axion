@@ -6,6 +6,7 @@ import re
 MISSING_MARKERS = {"n/a", "na", "-", "unknown"}
 _YEAR = re.compile(r"^\d{4}$")
 _SLASH = re.compile(r"^(\d{1,2})/(\d{1,2})/(\d{4})$")
+_COMMA_NUMBER = re.compile(r"^\d{1,3}(?:,\d{2,3})+$")
 
 
 def _q(name: str) -> str:
@@ -89,6 +90,12 @@ def _profile_column(conn, table, col):
             info["type"] = "text"
             if len({s.lower() for s in real}) < len(set(real)):
                 warnings.append("case variants of same value (e.g. ACTIVE vs active)")
+            comma_numbers = sum(1 for value in real if _COMMA_NUMBER.fullmatch(value))
+            if comma_numbers:
+                warnings.append(
+                    f"{comma_numbers} numeric-looking values use comma separators; "
+                    "numeric aggregation requires explicit normalization"
+                )
 
     if info["rows"] > 1 and info["distinct"] == 1 and not (nulls or blank or marker):
         warnings.append("constant column")

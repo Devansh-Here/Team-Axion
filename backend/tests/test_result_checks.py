@@ -1,6 +1,7 @@
 import sqlite3
 from app.contracts import QueryOutcome
 from app.demo_data import build
+from app.mock_crm import build as build_crm
 from app.profiler import profile_columns
 from app.result_checks import validate_result
 
@@ -62,6 +63,14 @@ def test_crm_deal_contact_aggregation_warns_about_join_inflation():
     )
     rep = validate_result("won revenue by owner", sql, out([[1.0]]), {})
     assert rep.acceptable and "JOIN_INFLATION_RISK" in codes(rep)
+
+
+def test_dirty_crm_amount_aggregation_is_blocked(tmp_path):
+    conn = sqlite3.connect(build_crm(str(tmp_path / "crm.sqlite")))
+    profile = profile_columns(conn, ["deals"])
+    rep = validate_result("total pipeline", "SELECT SUM(amount) FROM deals", out([[1.0]]), profile)
+    assert not rep.acceptable
+    assert "DIRTY_NUMERIC_AGGREGATION" in codes(rep)
 
 
 def test_real_demo_db_end_to_end(tmp_path):

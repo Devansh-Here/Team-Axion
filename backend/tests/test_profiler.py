@@ -40,6 +40,12 @@ def test_case_variants_warned(conn):
     assert any("case variants" in x for x in w)
 
 
+def test_comma_formatted_numeric_text_warned(conn):
+    conn.execute("UPDATE sales SET net_amt = '1,20,000' WHERE order_id = 'O-001'")
+    w = profile_columns(conn, ["sales"])["sales"]["net_amt"]["warnings"]
+    assert any("comma separators" in x for x in w)
+
+
 def test_duplicate_like_rows(conn):
     meta = profile_columns(conn, ["sales"])["sales"]["__table__"]
     assert meta["duplicate_rows"] == 1 and meta["row_count"] == 6

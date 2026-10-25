@@ -36,6 +36,19 @@ def _join_inflation_risk(sql: str) -> bool:
     return bool(has_deals and has_contacts and has_aggregate)
 
 
+def _dirty_numeric_aggregation(sql: str, profile: dict) -> list[tuple[str, str, dict]]:
+    """Return text columns that must not be silently SUM/AVG-coerced."""
+    if not re.search(r"\b(?:sum|avg)\s*\(", sql, re.I):
+        return []
+    dirty = []
+    for table, col, info in _used_columns(sql, profile):
+        if info.get("type") == "text" and (
+            info.get("blank") or info.get("missing_marker") or info.get("warnings")
+        ):
+            dirty.append((table, col, info))
+    return dirty
+
+
 def validate_result(question: str, sql: str, outcome: QueryOutcome, profile: dict) -> ValidationReport:
     checks, warnings = [], []
 
@@ -71,6 +84,17 @@ def validate_result(question: str, sql: str, outcome: QueryOutcome, profile: dic
         )
         checks.append(_check("JOIN_INFLATION_RISK", "WARNING", w))
         warnings.append(w)
+
+    dirty_numeric = _dirty_numeric_aggregation(sql, profile)
+    if dirty_numeric:
+        columns = ", ".join(f"{table}.{col}" for table, col, _ in dirty_numeric)
+        w = (
+            f"Numeric aggregation blocked for {columns}: values contain blanks, "
+            "missing markers, or non-canonical text formats."
+        )
+        checks.append(_check("DIRTY_NUMERIC_AGGREGATION", "BLOCKED", w))
+        warnings.append(w)
+        return ValidationReport(acceptable=False, checks=checks, warnings=warnings)
 
     for table, col, info in _used_columns(sql, profile):
         missing = (info.get("blank") or 0) + (info.get("missing_marker") or 0)

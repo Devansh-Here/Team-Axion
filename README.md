@@ -9,7 +9,8 @@ deliberately messy local SQLite fixture containing companies, contacts, deals,
 and activities. It includes case-variant stages, missing and comma-formatted
 amounts, mixed date formats, duplicate contact emails, blank close dates, and
 stage/status mismatches so the demo exercises data-quality checks instead of
-looking like a clean toy CRM.
+looking like a clean toy CRM. Numeric aggregation over the dirty amount field
+is blocked rather than allowing SQLite to silently coerce `N/A` or `1,20,000`.
 It uses the existing server-side policy, schema linker, read-only SQL guard,
 result checks, evidence persistence, and audit trail; there is no CRM write
 endpoint or external network dependency.
