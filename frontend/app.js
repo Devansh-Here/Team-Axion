@@ -16,6 +16,11 @@ const importResult = document.querySelector("#import-result");
 
 let busy = false;
 
+const DATASET_LABELS = {
+  demo: "Demo sales",
+  crm_demo: "Mock CRM (read-only)",
+};
+
 function escapeHtml(value) {
   return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
 }
@@ -72,7 +77,10 @@ async function loadDatasets() {
   if (!datasets.length) {
     const option = new Option("No permitted datasets", ""); option.disabled = true; option.selected = true; datasetSelect.add(option); return;
   }
-  datasets.forEach((dataset) => { const id = typeof dataset === "string" ? dataset : dataset.dataset_id; datasetSelect.add(new Option(id, id)); });
+    datasets.forEach((dataset) => {
+    const id = typeof dataset === "string" ? dataset : dataset.dataset_id;
+    datasetSelect.add(new Option(DATASET_LABELS[id] || id, id));
+  });
   document.querySelector("#dataset-metric").textContent = datasetSelect.value;
   await loadProfile();
 }
