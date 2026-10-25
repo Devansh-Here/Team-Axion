@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Hypnexis AI-02 | Workspace</title>
+    <title>Hypnexis AI-02 | CRM Analytics Workspace</title>
     <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
     <header class="topbar">
       <div>
         <p class="eyebrow">HYPNEXIS AI-02</p>
-        <h1>Evidence-first data analyst</h1>
+        <h1>Evidence-first data analyst · CRM</h1>
       </div>
       <div class="badges" aria-label="Runtime status">
         <span id="api-status" class="badge badge-muted">API checking…</span>
@@ -26,7 +26,7 @@
         <button class="nav-button" data-view="audit">Audit</button>
         <div class="sidebar-note">
           <strong>Safety boundary</strong>
-          <p>The model suggests. The backend policy and SQL guard decide.</p>
+           <p>The model suggests. The backend policy and SQL guard decide. Mock CRM access is read-only.</p>
         </div>
       </aside>
 
@@ -35,7 +35,7 @@
           <div class="section-heading">
             <div>
               <p class="eyebrow">WORKSPACE</p>
-              <h2 id="workspace-title">Ask your business data</h2>
+                <h2 id="workspace-title">Ask your CRM and business data</h2>
             </div>
             <label class="dataset-control">Dataset
               <select id="dataset-select" aria-label="Dataset"></select>
@@ -53,8 +53,8 @@
               placeholder="Which categories had lower net sales in 2025 than 2024?"></textarea>
             <div class="form-footer">
               <div class="examples" aria-label="Example questions">
-                <button type="button" class="example-button">Total net sales by category in 2025</button>
-                <button type="button" class="example-button">Which regions have missing sales values?</button>
+               <button type="button" class="example-button">Total pipeline value by deal stage</button>
+               <button type="button" class="example-button">Which owner has the most won revenue?</button>
               </div>
               <button id="analyze-button" class="primary-button" type="submit">Analyze</button>
             </div>

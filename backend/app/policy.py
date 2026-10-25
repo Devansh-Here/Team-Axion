@@ -13,14 +13,21 @@ CATALOG = {
         "products": ["product_id", "product_name", "category"],
         "customers": ["customer_id", "customer_name", "region"],
         "employees": ["employee_id", "department", "salary"],
-    }
+    },
+    "crm_demo": {
+        "companies": ["company_id", "company_name", "industry", "region"],
+        "contacts": ["contact_id", "contact_name", "email", "company_id", "region", "lifecycle_stage"],
+        "deals": ["deal_id", "company_id", "owner", "stage", "amount", "probability",
+                  "created_date", "close_date", "status"],
+        "activities": ["activity_id", "contact_id", "activity_type", "activity_date", "outcome"],
+    },
 }
 
 PROTECTED_COLUMNS = {"employees.salary"}
 
 ROLE_TABLES = {
-    "analyst": {"sales", "products", "customers", "employees"},
-    "viewer": {"sales", "products", "customers"},
+    "analyst": {"sales", "products", "customers", "employees", "companies", "contacts", "deals", "activities"},
+    "viewer": {"sales", "products", "customers", "companies", "contacts", "deals", "activities"},
 }
 
 _PROTECTED_TERMS = re.compile(

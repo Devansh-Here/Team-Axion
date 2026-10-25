@@ -11,6 +11,11 @@ const auditContent = document.querySelector("#audit-content");
 
 let busy = false;
 
+const DATASET_LABELS = {
+  demo: "Demo sales",
+  crm_demo: "Mock CRM (read-only)",
+};
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -79,7 +84,7 @@ async function loadDatasets() {
   }
   datasets.forEach((dataset) => {
     const id = typeof dataset === "string" ? dataset : dataset.dataset_id;
-    datasetSelect.add(new Option(id, id));
+    datasetSelect.add(new Option(DATASET_LABELS[id] || id, id));
   });
   await loadProfile();
 }

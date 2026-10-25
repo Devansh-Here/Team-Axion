@@ -15,6 +15,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app import config, metadata_db
 from app.agent import analyze
 from app.contracts import AnalysisRequest
+from app.mock_crm import build as build_mock_crm
 from app.policy import permitted_schema, resolve_role
 
 MAX_QUESTION_CHARS = 2000
@@ -61,6 +62,13 @@ async def lifespan(app):
         else:
             continue
         break
+    # The CRM integration is deliberately local and synthetic: create the
+    # read-only fixture once, then register it through the same dataset path
+    # used by the existing analytics pipeline.
+    crm_path = repo_data / "demo" / "crm_demo.sqlite"
+    if not crm_path.is_file():
+        build_mock_crm(str(crm_path))
+    metadata_db.upsert_dataset("crm_demo", str(crm_path))
     yield
 
 

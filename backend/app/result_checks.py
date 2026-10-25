@@ -23,6 +23,19 @@ def _used_columns(sql, profile):
     return out
 
 
+def _join_inflation_risk(sql: str) -> bool:
+    """Detect the CRM's known one-to-many deal/contact aggregation hazard.
+
+    This is a conservative warning, not a claim that every join is wrong. A
+    query that aggregates deal values after joining contacts should either
+    pre-aggregate deals or use a distinct/grain-safe strategy.
+    """
+    has_deals = re.search(r"\b(?:from|join)\s+(?:main\.)?deals\b", sql, re.I)
+    has_contacts = re.search(r"\bjoin\s+(?:main\.)?contacts\b", sql, re.I)
+    has_aggregate = re.search(r"\b(sum|avg|count)\s*\(", sql, re.I)
+    return bool(has_deals and has_contacts and has_aggregate)
+
+
 def validate_result(question: str, sql: str, outcome: QueryOutcome, profile: dict) -> ValidationReport:
     checks, warnings = [], []
 
@@ -49,6 +62,14 @@ def validate_result(question: str, sql: str, outcome: QueryOutcome, profile: dic
     if outcome.truncated:
         w = "Result was truncated at the row/byte cap; do not total it."
         checks.append(_check("TRUNCATED", "WARNING", w))
+        warnings.append(w)
+
+    if _join_inflation_risk(sql):
+        w = (
+            "Potential join inflation: deals are aggregated after joining contacts; "
+            "pre-aggregate at deal grain or use a distinct-safe calculation."
+        )
+        checks.append(_check("JOIN_INFLATION_RISK", "WARNING", w))
         warnings.append(w)
 
     for table, col, info in _used_columns(sql, profile):

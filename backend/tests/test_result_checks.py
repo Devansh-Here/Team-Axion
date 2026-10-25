@@ -55,6 +55,15 @@ def test_unrelated_table_not_warned():
     assert rep.acceptable and not rep.warnings
 
 
+def test_crm_deal_contact_aggregation_warns_about_join_inflation():
+    sql = (
+        "SELECT d.owner, SUM(CAST(d.amount AS REAL)) FROM deals d "
+        "JOIN contacts c ON c.company_id = d.company_id GROUP BY d.owner"
+    )
+    rep = validate_result("won revenue by owner", sql, out([[1.0]]), {})
+    assert rep.acceptable and "JOIN_INFLATION_RISK" in codes(rep)
+
+
 def test_real_demo_db_end_to_end(tmp_path):
     conn = sqlite3.connect(build(str(tmp_path / "d.sqlite")))
     prof = profile_columns(conn, ["sales"])
