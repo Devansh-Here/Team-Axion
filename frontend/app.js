@@ -8,6 +8,7 @@ const offlineMessage = document.querySelector("#offline-message");
 const answerCard = document.querySelector("#answer-card");
 const profileContent = document.querySelector("#profile-content");
 const auditContent = document.querySelector("#audit-content");
+const dashboardContent = document.querySelector("#dashboard-content");
 
 let busy = false;
 
@@ -63,6 +64,59 @@ function renderChecks(checks) {
       `${escapeHtml(check.status || "-")}</span></td><td>${escapeHtml(check.code || "-")}</td>` +
       `<td>${escapeHtml(check.detail || "-")}</td></tr>`).join("") +
     `</tbody></table></div>`;
+}
+
+function formatInsightValue(value) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 1 }).format(value);
+  }
+  return String(value ?? "Not available");
+}
+
+function renderBarChart(chart) {
+  const max = Math.max(...(chart.values || []), 1);
+  const bars = (chart.labels || []).map((label, index) => {
+    const value = Number(chart.values?.[index] || 0);
+    const width = Math.max(2, (value / max) * 100);
+    return `<div class="chart-row"><div class="chart-label">${escapeHtml(label)}</div>` +
+      `<div class="chart-track"><div class="chart-bar" style="width:${width}%"></div></div>` +
+      `<strong class="chart-value">${escapeHtml(formatInsightValue(value))}</strong></div>`;
+  }).join("");
+  return `<article class="chart-card"><h3>${escapeHtml(chart.title)}</h3>` +
+    `<p class="chart-detail">${escapeHtml(chart.detail || "")}</p><div class="bar-chart">${bars}</div></article>`;
+}
+
+function renderDashboard(payload) {
+  if (!payload || !payload.charts) {
+    dashboardContent.innerHTML = '<p class="empty">Visual insights are not available for this dataset.</p>';
+    return;
+  }
+  const periods = payload.periods || {};
+  const kpis = (payload.kpis || []).map((kpi) =>
+    `<article class="kpi-card ${kpi.tone === "warning" ? "kpi-warning" : ""}">` +
+    `<p>${escapeHtml(kpi.label)}</p><strong>${escapeHtml(formatInsightValue(kpi.value))}</strong>` +
+    `<span>${escapeHtml(kpi.detail || "")}</span></article>`).join("");
+  const insights = (payload.insights || []).map((insight) =>
+    `<article class="insight-card insight-${escapeHtml(insight.severity || "info")}">` +
+    `<strong>${escapeHtml(insight.title)}</strong><p>${escapeHtml(insight.detail)}</p></article>`).join("");
+  const quality = payload.data_quality || {};
+  const qualityRows = [
+    ["Duplicate email groups", quality.duplicate_email_groups],
+    ["Missing amount values", quality.missing_amounts],
+    ["Comma-formatted amounts", quality.comma_formatted_amounts],
+    ["Blank close dates", quality.blank_close_dates],
+    ["Stage/status mismatches", quality.stage_status_mismatches],
+  ].map(([label, value]) => `<li><span>${escapeHtml(label)}</span><strong>${escapeHtml(formatInsightValue(value))}</strong></li>`).join("");
+  dashboardContent.innerHTML =
+    `<div class="dashboard-period"><strong>${escapeHtml(periods.current || "Current year")}</strong>` +
+    ` compared with <strong>${escapeHtml(periods.previous || "Previous year")}</strong>` +
+    `${periods.comparable ? " · like-for-like records available" : " · no comparable prior period"}</div>` +
+    `<div class="kpi-grid">${kpis}</div>` +
+    `<section class="insights-panel"><div class="section-heading compact"><h3>Key insights</h3>` +
+    `<span class="badge badge-role">Observed data only</span></div>${insights || '<p class="empty">No additional insights.</p>'}</section>` +
+    `<div class="chart-grid">${(payload.charts || []).map(renderBarChart).join("")}</div>` +
+    `<section class="quality-panel"><h3>Data quality watchlist</h3><ul class="quality-list">${qualityRows}</ul>` +
+    `<p class="empty">Money totals remain blocked until the dirty amount field is normalized.</p></section>`;
 }
 
 function showError(message) {
@@ -127,6 +181,21 @@ async function loadDatasets() {
     datasetSelect.add(new Option(DATASET_LABELS[id] || id, id));
   });
   await loadProfile();
+  await loadDashboard();
+}
+
+async function loadDashboard() {
+  const dataset = datasetSelect.value;
+  if (!dataset) {
+    dashboardContent.innerHTML = '<p class="empty">Select a dataset to load visual insights.</p>';
+    return;
+  }
+  try {
+    const payload = await request(`/api/v1/datasets/${encodeURIComponent(dataset)}/dashboard`);
+    renderDashboard(payload);
+  } catch (error) {
+    dashboardContent.innerHTML = `<p class="empty">${escapeHtml(error.message)}</p>`;
+  }
 }
 
 function renderProfile(profile) {
@@ -244,6 +313,7 @@ document.querySelectorAll(".nav-button").forEach((button) => {
     document.querySelectorAll(".view").forEach((view) => { view.hidden = true; });
     document.querySelector(`#${button.dataset.view}-view`).hidden = false;
     if (button.dataset.view === "profile") await loadProfile();
+    if (button.dataset.view === "dashboard") await loadDashboard();
     if (button.dataset.view === "audit") await loadAudit();
   });
 });
@@ -265,7 +335,9 @@ document.querySelectorAll(".tab-button").forEach((button) => {
 });
 
 datasetSelect.addEventListener("change", loadProfile);
+datasetSelect.addEventListener("change", loadDashboard);
 document.querySelector("#refresh-profile").addEventListener("click", loadProfile);
+document.querySelector("#refresh-dashboard").addEventListener("click", loadDashboard);
 document.querySelector("#refresh-audit").addEventListener("click", loadAudit);
 questionForm.addEventListener("submit", analyze);
 

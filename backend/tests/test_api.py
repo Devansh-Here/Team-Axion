@@ -29,6 +29,19 @@ def test_datasets_list(client):
     assert client.get(f"{BASE}/datasets").status_code == 200
 
 
+def test_crm_dashboard_returns_visual_insight_payload(client):
+    r = client.get(f"{BASE}/datasets/crm_demo/dashboard")
+    assert r.status_code == 200
+    payload = r.json()
+    assert payload["current_year"] == 2026
+    assert payload["previous_year"] == 2025
+    assert {chart["id"] for chart in payload["charts"]} >= {
+        "deal_volume_by_year",
+        "deals_by_stage",
+        "contacts_by_lifecycle",
+    }
+
+
 def test_schema_has_no_salary(client):
     r = client.get(f"{BASE}/datasets/demo/schema")
     assert r.status_code == 200

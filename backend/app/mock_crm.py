@@ -35,6 +35,10 @@ DEALS = [
     # amount is TEXT on purpose: missing markers, Indian comma formatting,
     # and numeric strings must be profiled instead of silently coerced.
     # deal_id, company_id, owner, stage, amount, probability, created_date, close_date, status
+    ("D-090", "C-001", "Asha", "Closed Won", "10000", "1.0", "2025-01-12", "2025-02-20", "WON"),
+    ("D-091", "C-002", "Ravi", "Proposal", "16000", "0.6", "15/03/2025", "2025-06-01", "OPEN"),
+    ("D-092", "C-003", "Meera", "Closed Lost", "8000", "0.0", "Apr 08, 2025", "2025-05-10", "LOST"),
+    ("D-093", "C-004", "Asha", "Qualified", "14000", "0.4", "2025-07-02", "", "OPEN"),
     ("D-100", "C-001", "Asha", "Closed Won", "12000", "1.0", "2026-01-04", "2026-02-15", "WON"),
     ("D-101", "C-002", "Ravi", "Proposal", "18000", "0.6", "12/02/2026", "30/05/2026", "OPEN"),
     ("D-102", "C-003", "Meera", "Negotiation", "25000", "0.7", "05/03/2026", "Mar 05, 2026", "OPEN"),
@@ -50,6 +54,9 @@ DEALS = [
 ]
 
 ACTIVITIES = [
+    ("A-090", "CT-001", "Call", "2025-01-20", "Connected"),
+    ("A-091", "CT-002", "Email", "2025-03-18", "Replied"),
+    ("A-092", "CT-003", "Meeting", "Apr 15, 2025", "Qualified"),
     ("A-001", "CT-001", "Call", "2026-01-10", "Connected"),
     ("A-002", "CT-002", "Email", "10/02/2026", "Replied"),
     ("A-003", "CT-003", "Meeting", "Mar 12, 2026", "Qualified"),

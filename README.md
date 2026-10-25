@@ -29,6 +29,11 @@ Then select **Mock CRM (read-only)** in the workspace. Example questions:
 - How many contacts are in each lifecycle stage?
 - Which company has the largest open opportunity?
 
+Select **Insights dashboard** to see KPI cards, current-year versus previous-year
+deal charts, raw stage/lifecycle/activity charts, key insights, and a data-quality
+watchlist. The dashboard uses counts for dirty CRM dimensions and explicitly
+blocks value-based pipeline visuals until amount normalization is safe.
+
 The API exposes the CRM through the existing read-only routes, for example
 `GET /api/v1/datasets/crm_demo/schema`,
 `GET /api/v1/datasets/crm_demo/profile`, and `POST /api/v1/analyze` with

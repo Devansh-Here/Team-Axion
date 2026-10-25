@@ -15,6 +15,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app import config, metadata_db
 from app.agent import analyze
 from app.contracts import AnalysisRequest
+from app.dashboard import build_crm_dashboard
 from app.mock_crm import build as build_mock_crm
 from app.policy import permitted_schema, resolve_role
 
@@ -136,6 +137,27 @@ def dataset_profile(dataset_id: str):
         if conn is not None:
             conn.close()
     return {"dataset_id": dataset_id, "profile": _strip(profile)}
+
+
+@router.get("/datasets/{dataset_id}/dashboard")
+def dataset_dashboard(dataset_id: str):
+    """Return deterministic visual-insight data for the CRM demo."""
+    if dataset_id != "crm_demo":
+        raise ApiError(404, "DASHBOARD_NOT_AVAILABLE", "Dashboard is not available for this dataset.")
+    schema = permitted_schema(resolve_role(), dataset_id)
+    ds = metadata_db.get_dataset(dataset_id)
+    if not schema or ds is None:
+        raise ApiError(404, "DATASET_NOT_FOUND", "Dataset not found.")
+    connection = None
+    try:
+        uri = f"{Path(ds['db_path']).resolve().as_uri()}?mode=ro"
+        connection = sqlite3.connect(uri, uri=True)
+        return build_crm_dashboard(connection)
+    except Exception:
+        raise ApiError(503, "DASHBOARD_UNAVAILABLE", "Dashboard is not available.", retryable=True)
+    finally:
+        if connection is not None:
+            connection.close()
 
 
 @router.post("/analyze")

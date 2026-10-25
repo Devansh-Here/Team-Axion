@@ -21,6 +21,7 @@
     <div class="layout">
       <aside class="sidebar" aria-label="Workspace navigation">
         <button class="nav-button active" data-view="workspace">Workspace</button>
+        <button class="nav-button" data-view="dashboard">Insights dashboard</button>
         <button class="nav-button" data-view="profile">Data profile</button>
         <button class="nav-button" data-view="permissions">Permissions</button>
         <button class="nav-button" data-view="audit">Audit</button>
@@ -31,6 +32,19 @@
       </aside>
 
       <main class="content">
+        <section id="dashboard-view" class="view" aria-labelledby="dashboard-title" hidden>
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">VISUAL INSIGHTS</p>
+              <h2 id="dashboard-title">CRM performance at a glance</h2>
+            </div>
+            <button id="refresh-dashboard" class="secondary-button" type="button">Refresh dashboard</button>
+          </div>
+          <div id="dashboard-content" class="dashboard-content">
+            <p class="empty">Select a dataset to load visual insights.</p>
+          </div>
+        </section>
+
         <section id="workspace-view" class="view" aria-labelledby="workspace-title">
           <div class="section-heading">
             <div>
