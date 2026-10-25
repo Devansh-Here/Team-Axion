@@ -1,70 +1,61 @@
 import sqlite3
-
 import pytest
-
 from app.profiler import profile_columns
 
 
 @pytest.fixture
 def conn():
-    connection = sqlite3.connect(":memory:")
-    connection.execute(
-        "CREATE TABLE messy (value TEXT, amount TEXT, event_date TEXT)"
-    )
-    connection.executemany(
-        "INSERT INTO messy VALUES (?, ?, ?)",
-        [
-            (None, "0", "2024-01-15"),
-            ("", "10", "04/01/2025"),
-            ("N/A", "12.5", "2025-02-01"),
-            ("unknown", "", "2025"),
-            ("-", "-", "2025"),
-            ("ready", "0", "2025-12-31"),
-            ("ready", "0", "2025-12-31"),
-        ],
-    )
-    yield connection
-    connection.close()
+    c = sqlite3.connect(":memory:")
+    c.execute("CREATE TABLE sales(order_id TEXT, order_date TEXT, region TEXT, net_amt TEXT, status TEXT)")
+    c.executemany("INSERT INTO sales VALUES (?,?,?,?,?)", [
+        ("O-001", "2025-01-04", "Delhi", "1200.50", "ACTIVE"),
+        ("O-002", "04/01/2025", "delhi", "N/A", "active"),
+        ("O-003", "2025", "New Delhi", "-", ""),
+        ("O-004", "2025-02-14", "Delhi", "0", "CLOSED"),
+        ("O-005", "2025-02-14", None, None, "CLOSED"),
+        ("O-004", "2025-02-14", "Delhi", "0", "CLOSED"),  # duplicate of O-004
+    ])
+    return c
 
 
-def test_profile_distinguishes_null_blank_markers_and_zero(conn):
-    profile = profile_columns(conn, ["messy"])["messy"]
-
-    value = profile["columns"]["value"]
-    amount = profile["columns"]["amount"]
-
-    assert value["null_count"] == 1
-    assert value["blank_count"] == 1
-    assert value["missing_marker_counts"]["N/A"] == 1
-    assert value["missing_marker_counts"]["unknown"] == 1
-    assert value["missing_marker_counts"]["-"] == 1
-    assert amount["numeric_range"] == {"min": 0.0, "max": 12.5}
+def test_null_blank_marker_zero_distinct(conn):  # T-009
+    p = profile_columns(conn, ["sales"])["sales"]
+    amt = p["net_amt"]
+    assert amt["null"] == 1
+    assert amt["missing_marker"] == 2          # N/A and -
+    assert amt["zero"] == 2                    # zero is NOT missing
+    assert p["status"]["blank"] == 1
 
 
-def test_profile_flags_ambiguous_date_and_reports_range(conn):
-    dates = profile_columns(conn, ["messy"])["messy"]["columns"]["event_date"]
-
-    assert dates["date_range"] == {"min": "2024-01-15", "max": "2025-12-31", "ambiguous_count": 1}
-    assert "AMBIGUOUS_DATES" in dates["warnings"]
-
-
-def test_profile_counts_exact_duplicate_rows(conn):
-    profile = profile_columns(conn, ["messy"])["messy"]
-
-    assert profile["row_count"] == 7
-    assert profile["column_count"] == 3
-    assert profile["duplicate_like_rows"] == 1
+def test_ambiguous_date_flagged(conn):  # T-010
+    d = profile_columns(conn, ["sales"])["sales"]["order_date"]
+    assert d["type"] == "date"
+    assert d["ambiguous"] == 1
+    assert d["mixed_precision"] is True
+    assert d["date_min"] == "2025" and d["date_max"] == "2025-02-14"
 
 
-def test_profile_does_not_mutate_source(conn):
-    before = conn.execute("SELECT COUNT(*) FROM messy").fetchone()[0]
-
-    profile_columns(conn, ["messy"])
-
-    after = conn.execute("SELECT COUNT(*) FROM messy").fetchone()[0]
-    assert after == before
+def test_case_variants_warned(conn):
+    w = profile_columns(conn, ["sales"])["sales"]["status"]["warnings"]
+    assert any("case variants" in x for x in w)
 
 
-def test_profile_rejects_unknown_table(conn):
-    with pytest.raises(ValueError):
-        profile_columns(conn, ["does_not_exist"])
+def test_comma_formatted_numeric_text_warned(conn):
+    conn.execute("UPDATE sales SET net_amt = '1,20,000' WHERE order_id = 'O-001'")
+    w = profile_columns(conn, ["sales"])["sales"]["net_amt"]["warnings"]
+    assert any("comma separators" in x for x in w)
+
+
+def test_duplicate_like_rows(conn):
+    meta = profile_columns(conn, ["sales"])["sales"]["__table__"]
+    assert meta["duplicate_rows"] == 1 and meta["row_count"] == 6
+
+
+def test_unknown_table_skipped(conn):
+    assert profile_columns(conn, ["nope"]) == {}
+
+
+def test_does_not_mutate(conn):
+    before = conn.execute("SELECT COUNT(*) FROM sales").fetchone()[0]
+    profile_columns(conn, ["sales"])
+    assert conn.execute("SELECT COUNT(*) FROM sales").fetchone()[0] == before

@@ -11,6 +11,47 @@ from app.intent import parse_intent
 from app.model_client import ModelUnavailable
 from app.prompts import build_sql_prompt
 from app.schema_linker import link_schema
+import re
+
+def _iter_column_infos(profile):
+    """Yield per-column profile dicts. Supports both profiler shapes:
+    {table: {col: {...}}} (old) and {table: {"columns": {col: {...}}}} (data-quality lane)."""
+    for table in (profile or {}).values():
+        if not isinstance(table, dict):
+            continue
+        cols = table.get("columns") if isinstance(table.get("columns"), dict) else table
+        for info in cols.values():
+            if isinstance(info, dict):
+                yield info
+
+
+def _date_years(profile):
+    mins, maxs = [], []
+    for info in _iter_column_infos(profile):
+        rng = info.get("date_range") if isinstance(info.get("date_range"), dict) else {}
+        lo = info.get("date_min") or rng.get("min")
+        hi = info.get("date_max") or rng.get("max")
+        if lo and hi:
+            try:
+                mins.append(int(str(lo)[:4]))
+                maxs.append(int(str(hi)[:4]))
+            except ValueError:
+                pass
+    return mins, maxs
+
+
+def history_problem(question, profile):
+    """None if history is enough, else a reason code."""
+    mins, maxs = _date_years(profile)
+    if not mins:
+        return "NO_DATE_INFO"
+    lo, hi = min(mins), max(maxs)
+    m = re.search(r"\b(?:before|until|till)\s+(\d{4})\b", question.lower())
+    if m and lo >= int(m.group(1)):
+        return "NO_HISTORY_FOR_PERIOD"
+    if hi - lo < 1:
+        return "SNAPSHOT_ONLY"
+    return None
 
 MAX_REPAIRS = 2          # 1 candidate + 2 repairs = 3 attempts max
 PREVIEW_ROWS = 20
@@ -65,6 +106,8 @@ def compose_answer(outcome: QueryOutcome) -> str:
         return "No rows matched the current filters."
     if len(outcome.columns) == 1 and outcome.row_count == 1:
         return f"{outcome.columns[0]}: {outcome.rows[0][0]}"
+    if outcome.row_count <= 10:
+        return "; ".join(", ".join(f"{c}: {v}" for c, v in zip(outcome.columns, r)) for r in outcome.rows)
     return f"{outcome.row_count} rows returned. See the result preview."
 
 
@@ -124,6 +167,15 @@ def analyze(request: AnalysisRequest, role: str, deps: Optional[Deps] = None) ->
 
     tables = sorted(policy.allowed_tables)
     profile = deps.get_profile(request.dataset_id, tables)
+    if getattr(intent, "trend", False):
+        reason = history_problem(request.question, profile)
+        if reason:
+            trace["rejections"].append(reason)
+            return finish(
+                "INSUFFICIENT_EVIDENCE",
+                answer="The data does not contain enough history to answer this trend question.",
+                warnings=[reason],
+            )
     rules = [f"{k}: {v}" for k, v in deps.confirmed_rules.items()]
 
     # 3. Generate -> guard -> execute -> check (1 candidate + 2 repairs)
@@ -158,7 +210,9 @@ def analyze(request: AnalysisRequest, role: str, deps: Optional[Deps] = None) ->
         except Exception:
             verdict = None
         if type(verdict).__name__ != "Allow":
-            previous_error = _safe_code(getattr(verdict, "code", None), "sql_rejected")
+            # sql_guard.Reject carries `.reason` (codes only, no column/table names); older stubs used `.code`
+            reason = getattr(verdict, "reason", None) or getattr(verdict, "code", None)
+            previous_error = _safe_code(reason, "sql_rejected")
             trace["rejections"].append(previous_error)   # rejected SQL itself is NOT stored
             continue
 
