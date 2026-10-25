@@ -26,8 +26,20 @@ CATALOG = {
 PROTECTED_COLUMNS = {"employees.salary"}
 
 ROLE_TABLES = {
+    "owner": {"sales", "products", "customers", "employees", "companies", "contacts", "deals", "activities"},
     "analyst": {"sales", "products", "customers", "employees", "companies", "contacts", "deals", "activities"},
     "viewer": {"sales", "products", "customers", "companies", "contacts", "deals", "activities"},
+}
+
+ROLE_LIMITS = {
+    "owner": {"row_limit": 5000, "column_limit": 100},
+    "analyst": {"row_limit": 500, "column_limit": 40},
+    "viewer": {"row_limit": 100, "column_limit": 12},
+}
+
+# Viewer can work with CRM dimensions but must not receive raw contact emails.
+ROLE_DENIED_COLUMNS = {
+    "viewer": {"crm_demo.contacts.email"},
 }
 
 _PROTECTED_TERMS = re.compile(
@@ -53,32 +65,38 @@ def permitted_schema(role: str, dataset_id: str) -> dict[str, list[str]]:
     for table, cols in dataset.items():
         if table not in tables:
             continue
-        allowed = [c for c in cols if f"{table}.{c}" not in PROTECTED_COLUMNS]
+        allowed = [c for c in cols
+                   if f"{table}.{c}" not in PROTECTED_COLUMNS
+                   and f"{dataset_id}.{table}.{c}" not in ROLE_DENIED_COLUMNS.get(role, set())]
         if allowed:
             out[table] = allowed
     return out
 
 
-def authorize(role: str, dataset_id: str, question: str) -> PolicyDecision:
+def authorize(role: str, dataset_id: str, question: str,
+              schema_override: dict[str, list[str]] | None = None) -> PolicyDecision:
     try:
         if dataset_id not in CATALOG:
             return _deny("UNKNOWN_DATASET")
         if role not in ROLE_TABLES:
             return _deny("UNKNOWN_ROLE")
 
-        schema = permitted_schema(role, dataset_id)
+        schema = schema_override or permitted_schema(role, dataset_id)
         if not schema:
             return _deny("NO_PERMITTED_SCHEMA")
 
         if isinstance(question, str) and _PROTECTED_TERMS.search(question):
-            if role == "analyst":
+            if role in {"owner", "analyst"}:
                 return PolicyDecision(action="ASK",
                                       reason_code="PROTECTED_DATA_APPROVAL_REQUIRED")
             return _deny("PROTECTED_DATA_DENIED")
 
         tables = set(schema)
         columns = {f"{t}.{c}" for t, cols in schema.items() for c in cols}
+        limits = ROLE_LIMITS[role]
         return PolicyDecision(action="ALLOW", allowed_tables=tables,
-                              allowed_columns=columns, reason_code="OK")
+                              allowed_columns=columns, reason_code="OK",
+                              row_limit=limits["row_limit"],
+                              column_limit=limits["column_limit"])
     except Exception:
         return _deny("POLICY_INTERNAL_ERROR")

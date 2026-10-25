@@ -8,6 +8,7 @@ class AnalysisRequest(BaseModel):
     dataset_id: str
     question: str
     mode: str = "question_answering"
+    conversation_id: Optional[str] = None
     # role yahan NAHI hai. Role server side se aata hai.
 
 class PolicyDecision(BaseModel):
@@ -15,6 +16,8 @@ class PolicyDecision(BaseModel):
     allowed_tables: set[str] = set()
     allowed_columns: set[str] = set()   # format: "table.column"
     reason_code: str = ""
+    row_limit: int = 500
+    column_limit: int = 40
 
 class QueryOutcome(BaseModel):
     status: Literal["OK", "REJECTED", "ERROR", "TIMEOUT"]

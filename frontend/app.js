@@ -11,6 +11,20 @@ const auditContent = document.querySelector("#audit-content");
 const dashboardContent = document.querySelector("#dashboard-content");
 
 let busy = false;
+function createConversationId() {
+  return window.crypto?.randomUUID ? window.crypto.randomUUID() : `conversation-${Date.now()}`;
+}
+
+function loadConversationId() {
+  try {
+    return localStorage.getItem("teamAxionConversationId") || createConversationId();
+  } catch (_) {
+    return createConversationId();
+  }
+}
+
+let conversationId = loadConversationId();
+try { localStorage.setItem("teamAxionConversationId", conversationId); } catch (_) { /* storage is optional */ }
 
 const DATASET_LABELS = {
   demo: "Demo sales",
@@ -270,7 +284,7 @@ async function analyze(event) {
     const payload = await request("/api/v1/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Accept": "application/json" },
-      body: JSON.stringify({ dataset_id: datasetSelect.value, question, mode: "question_answering" }),
+      body: JSON.stringify({ dataset_id: datasetSelect.value, question, mode: "question_answering", conversation_id: conversationId }),
     });
     let evidence = null;
     if (payload.run_id) {
@@ -339,6 +353,13 @@ datasetSelect.addEventListener("change", loadDashboard);
 document.querySelector("#refresh-profile").addEventListener("click", loadProfile);
 document.querySelector("#refresh-dashboard").addEventListener("click", loadDashboard);
 document.querySelector("#refresh-audit").addEventListener("click", loadAudit);
+document.querySelector("#new-conversation").addEventListener("click", () => {
+  conversationId = createConversationId();
+  try { localStorage.setItem("teamAxionConversationId", conversationId); } catch (_) { /* storage is optional */ }
+  questionInput.value = "";
+  answerCard.hidden = true;
+  showError("");
+});
 questionForm.addEventListener("submit", analyze);
 
 setStages("waiting");

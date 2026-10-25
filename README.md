@@ -34,6 +34,15 @@ deal charts, raw stage/lifecycle/activity charts, key insights, and a data-quali
 watchlist. The dashboard uses counts for dirty CRM dimensions and explicitly
 blocks value-based pipeline visuals until amount normalization is safe.
 
+## Phase 2 safety extension
+
+The organization-safety work is documented in `outputs/PHASE2_REPORT.md`. It
+adds server-side `owner`, `analyst`, and `viewer` roles with row/column limits,
+pre-model instruction-boundary checks, persistent three-turn follow-ups through
+`conversation_id`, and schema recovery for renamed or split CRM tables. Run the
+backend tests before presenting the extension; the report records measured
+deterministic checks separately from model answer accuracy.
+
 The API exposes the CRM through the existing read-only routes, for example
 `GET /api/v1/datasets/crm_demo/schema`,
 `GET /api/v1/datasets/crm_demo/profile`, and `POST /api/v1/analyze` with

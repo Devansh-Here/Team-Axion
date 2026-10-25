@@ -12,6 +12,7 @@ from app.intent import parse_intent
 from app.model_client import ModelUnavailable
 from app.prompts import build_sql_prompt
 from app.schema_linker import link_schema
+from app.security import contains_untrusted_instruction
 import re
 
 def _iter_column_infos(profile):
@@ -172,6 +173,15 @@ def analyze(request: AnalysisRequest, role: str, deps: Optional[Deps] = None) ->
         return AnalysisOutcome(run_id=run_id, status=status, answer=answer, result_summary=summary,
                                warnings=warnings, evidence_id=evidence_id)
 
+    # 0. Prompt/data injection boundary: never send instruction-like text to the model.
+    if contains_untrusted_instruction(request.question):
+        trace["rejections"].append("UNTRUSTED_INSTRUCTION")
+        return finish(
+            "INSUFFICIENT_EVIDENCE",
+            answer="I ignored instruction-like text and did not run it as a data request.",
+            warnings=["UNTRUSTED_INSTRUCTION_IGNORED"],
+        )
+
     # 1. Policy (fail closed)
     try:
         policy = deps.authorize(role, request.dataset_id, request.question)
@@ -183,6 +193,8 @@ def analyze(request: AnalysisRequest, role: str, deps: Optional[Deps] = None) ->
         return finish("APPROVAL_REQUIRED", answer="This request needs approval before it can run.")
     if action not in ("ALLOW", "MASK") or not policy.allowed_columns:
         return finish("ACCESS_DENIED", answer="Access to the requested data is not permitted.")
+    trace["row_limit"] = policy.row_limit
+    trace["column_limit"] = policy.column_limit
     trace["schema_hash"] = hashlib.sha256(",".join(sorted(policy.allowed_columns)).encode()).hexdigest()[:16]
 
     # 2. Intent + schema linking (clarify BEFORE calling the model)
@@ -249,6 +261,15 @@ def analyze(request: AnalysisRequest, role: str, deps: Optional[Deps] = None) ->
         outcome = deps.execute(request.dataset_id, sql, [])
         if outcome.status != "OK":
             previous_error = _safe_code(outcome.error_code, "execution_error")
+            trace["rejections"].append(previous_error)
+            continue
+
+        if outcome.row_count > policy.row_limit:
+            previous_error = "ROW_LIMIT_EXCEEDED"
+            trace["rejections"].append(previous_error)
+            continue
+        if len(outcome.columns) > policy.column_limit:
+            previous_error = "COLUMN_LIMIT_EXCEEDED"
             trace["rejections"].append(previous_error)
             continue
 

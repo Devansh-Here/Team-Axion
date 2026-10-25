@@ -40,6 +40,7 @@ h3 { margin-bottom: 0; }
 .view[hidden], .tab-panel[hidden] { display: none; }
 .section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
 .section-heading.compact { align-items: center; margin-bottom: 12px; }
+.workspace-controls { display: flex; align-items: flex-end; gap: 10px; }
 .dataset-control { display: grid; gap: 5px; color: var(--muted); font-size: 0.78rem; font-weight: 700; }
 select, textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); }
 select { min-width: 180px; padding: 10px; }
@@ -118,6 +119,7 @@ th { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-
 
 @media (max-width: 800px) {
   .topbar, .section-heading, .form-footer { align-items: stretch; flex-direction: column; }
+  .workspace-controls { align-items: stretch; flex-direction: column; }
   .badges { justify-content: flex-start; }
   .layout { grid-template-columns: 1fr; padding-top: 18px; }
   .sidebar { display: grid; grid-template-columns: repeat(4, 1fr); }

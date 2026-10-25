@@ -15,9 +15,11 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app import config, metadata_db
 from app.agent import analyze
 from app.contracts import AnalysisRequest
+from app.conversations import merge_follow_up
 from app.dashboard import build_crm_dashboard
 from app.mock_crm import build as build_mock_crm
-from app.policy import permitted_schema, resolve_role
+from app.policy import resolve_role
+from app.schema_recovery import recover_permitted_schema
 
 MAX_QUESTION_CHARS = 2000
 _PROTECTED_KEYS = {"salary"}  # protected column naam (kisi bhi level pe drop)
@@ -112,7 +114,8 @@ def datasets():
 
 @router.get("/datasets/{dataset_id}/schema")
 def dataset_schema(dataset_id: str):
-    schema = permitted_schema(resolve_role(), dataset_id)
+    ds = metadata_db.get_dataset(dataset_id)
+    schema = recover_permitted_schema(ds["db_path"], resolve_role(), dataset_id) if ds else {}
     if not schema:
         raise ApiError(404, "DATASET_NOT_FOUND", "Dataset not found.")
     return {"dataset_id": dataset_id, "tables": schema}
@@ -120,8 +123,8 @@ def dataset_schema(dataset_id: str):
 
 @router.get("/datasets/{dataset_id}/profile")
 def dataset_profile(dataset_id: str):
-    schema = permitted_schema(resolve_role(), dataset_id)
     ds = metadata_db.get_dataset(dataset_id)
+    schema = recover_permitted_schema(ds["db_path"], resolve_role(), dataset_id) if ds else {}
     if not schema or ds is None:
         raise ApiError(404, "DATASET_NOT_FOUND", "Dataset not found.")
     conn = None
@@ -144,8 +147,8 @@ def dataset_dashboard(dataset_id: str):
     """Return deterministic visual-insight data for the CRM demo."""
     if dataset_id != "crm_demo":
         raise ApiError(404, "DASHBOARD_NOT_AVAILABLE", "Dashboard is not available for this dataset.")
-    schema = permitted_schema(resolve_role(), dataset_id)
     ds = metadata_db.get_dataset(dataset_id)
+    schema = recover_permitted_schema(ds["db_path"], resolve_role(), dataset_id) if ds else {}
     if not schema or ds is None:
         raise ApiError(404, "DATASET_NOT_FOUND", "Dataset not found.")
     connection = None
@@ -165,6 +168,12 @@ def analyze_route(req: AnalysisRequest):
     if not req.question.strip() or len(req.question) > MAX_QUESTION_CHARS:
         raise ApiError(422, "INVALID_QUESTION", "Question is empty or too long.")
     role = resolve_role()  # client se role kabhi nahi
+    original_question = req.question
+    effective_question = original_question
+    if req.conversation_id:
+        history = metadata_db.list_conversation_questions(req.conversation_id)
+        effective_question = merge_follow_up(history, original_question)
+        req.question = effective_question
     try:
         outcome = analyze(req, role)
     except Exception:
@@ -174,6 +183,11 @@ def analyze_route(req: AnalysisRequest):
         metadata_db.save_run(outcome.run_id, req.dataset_id, outcome.status, req.question)
         metadata_db.add_audit_event(outcome.run_id, "analyze",
                                     {"dataset_id": req.dataset_id, "status": outcome.status})
+        if req.conversation_id:
+            metadata_db.save_conversation_turn(
+                req.conversation_id, req.dataset_id, original_question,
+                effective_question, outcome.status,
+            )
     except Exception:
         pass  # logging fail hone se user ka answer nahi rukna chahiye
     return outcome

@@ -37,6 +37,22 @@ CREATE TABLE IF NOT EXISTS audit_events (
 );
 CREATE INDEX IF NOT EXISTS idx_evidence_run ON evidence(run_id);
 CREATE INDEX IF NOT EXISTS idx_audit_run ON audit_events(run_id);
+CREATE TABLE IF NOT EXISTS conversations (
+    conversation_id TEXT PRIMARY KEY,
+    dataset_id TEXT NOT NULL,
+    created_at REAL NOT NULL,
+    updated_at REAL NOT NULL
+);
+CREATE TABLE IF NOT EXISTS conversation_turns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    conversation_id TEXT NOT NULL,
+    turn_index INTEGER NOT NULL,
+    question TEXT NOT NULL,
+    effective_question TEXT NOT NULL,
+    status TEXT,
+    created_at REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_conversation_turns ON conversation_turns(conversation_id, turn_index);
 """
 
 
@@ -138,3 +154,31 @@ def list_audit_events(limit=50, offset=0, path=None):
             "ORDER BY id DESC LIMIT ? OFFSET ?", (limit, offset)).fetchall()
     return [{"id": r[0], "run_id": r[1], "event_type": r[2],
              "payload": json.loads(r[3]), "created_at": r[4]} for r in rows]
+
+
+def list_conversation_questions(conversation_id, path=None):
+    with _conn(path) as c:
+        rows = c.execute(
+            "SELECT question FROM conversation_turns WHERE conversation_id=? ORDER BY turn_index",
+            (conversation_id,),
+        ).fetchall()
+    return [row[0] for row in rows]
+
+
+def save_conversation_turn(conversation_id, dataset_id, question, effective_question, status, path=None):
+    now = time.time()
+    with _conn(path) as c:
+        existing = c.execute(
+            "SELECT COALESCE(MAX(turn_index), 0) FROM conversation_turns WHERE conversation_id=?",
+            (conversation_id,),
+        ).fetchone()[0]
+        c.execute(
+            "INSERT OR IGNORE INTO conversations(conversation_id,dataset_id,created_at,updated_at) VALUES(?,?,?,?)",
+            (conversation_id, dataset_id, now, now),
+        )
+        c.execute(
+            "INSERT INTO conversation_turns(conversation_id,turn_index,question,effective_question,status,created_at) "
+            "VALUES(?,?,?,?,?,?)",
+            (conversation_id, existing + 1, question, effective_question, status, now),
+        )
+        c.execute("UPDATE conversations SET updated_at=? WHERE conversation_id=?", (now, conversation_id))
